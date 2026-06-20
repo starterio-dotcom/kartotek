@@ -1,0 +1,23 @@
+node_modules/
+dist/
+build/
+coverage/
+.tarhely/
+*.tsbuildinfo
+.env
+.env.local
+*.log
+.DS_Store
+.vite/
+.turbo/
+.idea/
+.vscode/
+
+# Tranziens OIDC-teszt artefaktumok
+.kc-token.txt
+.oidc-api.log
+
+# Playwright / E2E artefaktumok
+test-results/
+playwright-report/
+.playwright/

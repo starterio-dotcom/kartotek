@@ -1,0 +1,2332 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kartoték · FAIR / 3R</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+<style>
+  /* ===== DÁP tokenek mint alap + modern felületi réteg ===== */
+  :root{
+    --bg:#F7F8FA; --felulet:#FFFFFF; --felulet-2:#F2F4F8;
+    --keret:#E6E9EF; --keret-eros:#D3D9E3; --keret-ui:#7B8694;
+    --brand:#4258ED; --brand-hover:#3447D4; --brand-melyebb:#3130AB;
+    --brand-tint:#EEF2FF; --brand-tint-2:#E3EAFF;
+    --t-eros:#16191F; --t-alap:#3F4754; --t-halk:#5C6677; --t-leges:#5F6B7D;
+    --pozitiv:#066E2B; --pozitiv-bg:#E7F8EE;
+    --info:#065E90; --info-bg:#E9F4FC;
+    --figyelem:#A65200; --figyelem-keret:#F98900; --figyelem-bg:#FFF3E3;
+    --negativ:#D6220F; --negativ-bg:#FDEDEA;
+    --semleges-bg:#EEF1F5; --lezart:#373D49;
+    --fokusz:#647AFF;
+    --arnyek-s:0 1px 2px rgba(16,24,40,.05);
+    --arnyek-m:0 4px 16px -2px rgba(16,24,40,.08), 0 1px 2px rgba(16,24,40,.05);
+    --r-s:6px; --r-m:10px; --r-l:14px; --r-pill:999px;
+    --mono:ui-monospace,'SF Mono','Cascadia Code',Consolas,monospace;
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{height:100%}
+  body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--t-alap);
+    font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  button{font-family:inherit;cursor:pointer;color:inherit}
+  input,select,textarea{font-family:inherit;font-size:14px;color:var(--t-alap)}
+  button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+    outline:none;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--fokusz)}
+  ::placeholder{color:var(--t-leges)}
+
+  /* ---------- Fejléc ---------- */
+  header{
+    display:flex;align-items:center;gap:14px;height:58px;padding:0 18px;
+    background:rgba(255,255,255,.86);backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--keret);position:sticky;top:0;z-index:50;
+  }
+  .brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .brand-jel{width:30px;height:30px;border-radius:9px;flex:none;
+    background:linear-gradient(135deg,var(--brand) 0%,var(--brand-melyebb) 100%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+  .brand h1{font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--t-eros);line-height:1.1}
+  .brand .al{font-size:11.5px;color:var(--t-halk);font-weight:500}
+  .kereso-wrap{position:relative;width:min(340px,32vw)}
+  .kereso-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--t-leges)}
+  .kereso{width:100%;padding:8px 56px 8px 34px;border:1px solid var(--keret);
+    border-radius:var(--r-m);background:var(--felulet-2);transition:background .15s,border-color .15s}
+  .kereso:hover{background:#fff;border-color:var(--keret-eros)}
+  .kereso:focus{background:#fff;border-color:var(--brand)}
+  .kereso-wrap kbd{position:absolute;right:9px;top:50%;transform:translateY(-50%);
+    font-family:var(--sans);font-size:10.5px;font-weight:600;color:var(--t-leges);
+    border:1px solid var(--keret);border-radius:5px;padding:1px 5px;background:#fff}
+  .header-spacer{flex:1}
+  .hctrl{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--t-halk);font-weight:500}
+  .hctrl input[type=date],.hctrl select{background:#fff;border:1px solid var(--keret);
+    border-radius:var(--r-s);padding:6px 8px;font-size:13px;font-weight:500}
+  .hctrl input[type=date]:hover,.hctrl select:hover{border-color:var(--keret-eros)}
+  .gomb{display:inline-flex;align-items:center;gap:7px;border-radius:var(--r-m);
+    padding:8px 14px;font-size:13px;font-weight:600;border:1px solid transparent;
+    transition:background .15s,border-color .15s,transform .05s}
+  .gomb:active{transform:translateY(1px)}
+  .gomb.elsodleges{background:var(--brand);color:#fff}
+  .gomb.elsodleges:hover{background:var(--brand-hover)}
+  .gomb.masodlagos{background:#fff;border-color:var(--keret-eros);color:var(--t-alap)}
+  .gomb.masodlagos:hover{border-color:var(--t-leges);background:var(--felulet-2)}
+  .gomb.veszelyes{background:#fff;border-color:#F3B6AE;color:var(--negativ)}
+  .gomb.veszelyes:hover{background:var(--negativ-bg)}
+  .gomb.halk{background:transparent;color:var(--t-halk)}
+  .gomb.halk:hover{background:var(--felulet-2);color:var(--t-alap)}
+
+  /* ---------- Alaprajz ---------- */
+  .layout{display:grid;grid-template-columns:350px 1fr;height:calc(100vh - 58px)}
+  @media(max-width:880px){.layout{display:block;height:auto}}
+
+  /* ---------- Lista panel ---------- */
+  aside{border-right:1px solid var(--keret);background:var(--felulet);
+    display:flex;flex-direction:column;min-height:0}
+  .panel-fej{padding:14px 14px 10px;display:flex;flex-direction:column;gap:10px}
+  .szegmens{display:flex;background:var(--felulet-2);border-radius:var(--r-m);padding:3px;gap:2px}
+  .szegmens button{flex:1;border:none;background:transparent;border-radius:8px;
+    padding:6px 4px;font-size:12px;font-weight:600;color:var(--t-halk);transition:all .15s}
+  .szegmens button:hover{color:var(--t-alap)}
+  .szegmens button.aktiv{background:#fff;color:var(--t-eros);box-shadow:var(--arnyek-s)}
+  .szegmens .db{font-size:10.5px;font-weight:700;color:var(--t-leges);margin-left:3px}
+  .szegmens button.aktiv .db{color:var(--brand)}
+  .szuro-sor{display:flex;flex-wrap:wrap;gap:5px}
+  .chip{border:1px solid var(--keret);background:#fff;border-radius:var(--r-pill);
+    padding:3px 11px;font-size:11.5px;font-weight:600;color:var(--t-halk);transition:all .12s}
+  .chip:hover{border-color:var(--brand);color:var(--brand)}
+  .chip.aktiv{background:var(--brand-tint);color:var(--brand);border-color:var(--brand)}
+  .lista{overflow-y:auto;flex:1;padding:4px 10px 14px;display:flex;flex-direction:column;gap:6px}
+  .lista-elem{text-align:left;background:#fff;border:1px solid transparent;
+    border-radius:var(--r-m);padding:10px 12px;width:100%;position:relative;transition:all .12s}
+  .lista-elem:hover{background:var(--felulet-2)}
+  .lista-elem.kivalasztott{background:var(--brand-tint);border-color:var(--brand-tint-2)}
+  .lista-elem.kivalasztott::before{content:'';position:absolute;left:0;top:10px;bottom:10px;
+    width:3px;border-radius:3px;background:var(--brand)}
+  .le-sor1{display:flex;align-items:center;gap:8px}
+  .lista-kulcs{font-family:var(--mono);font-size:10.5px;font-weight:500;color:var(--t-halk);letter-spacing:.02em}
+  .le-sor1 .tolto{flex:1}
+  .lista-cim{font-size:13.5px;font-weight:600;color:var(--t-eros);margin:3px 0 4px;letter-spacing:-.005em}
+  .lista-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--t-leges)}
+  .lista-ures{color:var(--t-halk);font-size:13px;padding:26px 14px;text-align:center}
+
+  /* ---------- Státusz jelvények (DÁP szemantika) ---------- */
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
+    padding:2px 9px;border-radius:var(--r-pill)}
+  .badge::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+  .b-Vázlat{background:var(--semleges-bg);color:var(--t-halk)}
+  .b-Véleményezés{background:var(--figyelem-bg);color:var(--figyelem)}
+  .b-Jóváhagyott{background:var(--info-bg);color:var(--info)}
+  .b-Hatályos{background:var(--pozitiv-bg);color:var(--pozitiv)}
+  .b-Elavult{background:#E3E6EC;color:#5A6372}
+  .b-Archivált{background:var(--lezart);color:#fff}
+  .b-Elvetve{background:var(--negativ-bg);color:var(--negativ)}
+  .badge.mini{font-size:10px;padding:1px 7px}
+  .badge.nagy{font-size:13px;padding:5px 13px}
+
+  /* ---------- Fő nézet ---------- */
+  main{overflow-y:auto;min-height:0}
+  .ures-allapot{margin:90px auto;max-width:380px;text-align:center;color:var(--t-halk)}
+  .ures-allapot h2{font-size:18px;font-weight:700;color:var(--t-eros);margin-bottom:6px}
+
+  .reszlet-fej{position:sticky;top:0;z-index:10;background:rgba(247,248,250,.92);
+    backdrop-filter:blur(8px);padding:18px 28px 0;border-bottom:1px solid var(--keret)}
+  .rf-felso{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap}
+  .rf-cimblokk{flex:1;min-width:280px}
+  .kulcs-chip{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);
+    font-size:11.5px;font-weight:500;color:var(--t-halk);background:var(--felulet-2);
+    border:1px solid var(--keret);border-radius:var(--r-s);padding:2px 8px;margin-bottom:8px}
+  .reszlet-cim{font-size:23px;font-weight:700;letter-spacing:-.02em;color:var(--t-eros);line-height:1.25}
+  .reszlet-altipus{font-size:12.5px;color:var(--t-halk);margin-top:4px;font-weight:500}
+  .rf-akciok{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:4px}
+  .szerep-hint{font-size:11.5px;color:var(--t-leges);font-weight:500}
+
+  /* ---------- Életciklus-stepper (szignatúra elem) ---------- */
+  .stepper{display:flex;align-items:flex-start;margin:20px 0 0;padding-bottom:16px;overflow-x:auto}
+  .lepes{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:84px;position:relative}
+  .lepes .pont{width:22px;height:22px;border-radius:50%;border:2px solid var(--keret-ui);
+    background:#fff;display:flex;align-items:center;justify-content:center;z-index:1;transition:all .2s}
+  .lepes .pont svg{display:none}
+  .lepes .felirat{font-size:10.5px;font-weight:600;color:var(--t-leges);text-align:center;white-space:nowrap}
+  .lepes.kesz .pont{background:var(--brand-tint-2);border-color:var(--brand)}
+  .lepes.kesz .pont svg{display:block;color:var(--brand)}
+  .lepes.kesz .felirat{color:var(--t-halk)}
+  .lepes.aktualis .pont{border-color:var(--st-szin,var(--brand));background:var(--st-szin,var(--brand));
+    box-shadow:0 0 0 4px var(--st-tint,var(--brand-tint))}
+  .lepes.aktualis .felirat{color:var(--st-szin,var(--brand));font-weight:700}
+  .osszekoto{flex:1;min-width:26px;height:2px;background:var(--keret-ui);margin-top:10px;position:relative}
+  .osszekoto.kesz{background:var(--brand)}
+  .osszekoto .auto-cimke{position:absolute;top:-9px;left:50%;transform:translateX(-50%);
+    font-size:8.5px;font-weight:800;letter-spacing:.08em;color:var(--figyelem);
+    background:var(--figyelem-bg);border-radius:4px;padding:1px 5px}
+  .stepper-elvetve{display:flex;align-items:center;gap:10px;margin:20px 0 0;padding-bottom:16px;
+    color:var(--negativ);font-size:13px;font-weight:600}
+
+  /* ---------- Tartalom rács ---------- */
+  .reszlet-test{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:22px;
+    padding:22px 28px 40px;max-width:1180px}
+  @media(max-width:1020px){.reszlet-test{grid-template-columns:1fr}}
+  .tartalom,.oldalsav{display:flex;flex-direction:column;gap:14px;min-width:0}
+  .blokk{background:var(--felulet);border:1px solid var(--keret);border-radius:var(--r-l);
+    box-shadow:var(--arnyek-s);padding:16px 18px}
+  .blokk-cim{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--t-leges);margin-bottom:9px}
+  .blokk .torzs{font-size:14px}
+  .torzs p{margin:0 0 9px}.torzs p:last-child{margin-bottom:0}
+  .torzs ol,.torzs ul{margin:0 0 9px 20px}
+  .torzs li{margin-bottom:4px}
+  .torzs .ures{color:var(--t-leges);font-style:italic}
+  .ketted{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:640px){.ketted{grid-template-columns:1fr}}
+
+  .cia-racs{display:flex;gap:10px}
+  .cia-cella{flex:1;background:var(--felulet-2);border-radius:var(--r-m);padding:9px;text-align:center}
+  .cia-cella b{font-size:19px;display:block;color:var(--t-eros);letter-spacing:-.02em}
+  .cia-cella span{font-size:10px;font-weight:600;letter-spacing:.05em;color:var(--t-halk)}
+
+  /* Oldalsáv elemei */
+  .verzio-lista{display:flex;flex-direction:column;gap:5px}
+  .verzio-tab{display:flex;align-items:center;gap:9px;border:1px solid var(--keret);
+    background:#fff;border-radius:var(--r-m);padding:7px 11px;font-size:12.5px;
+    font-weight:600;color:var(--t-alap);transition:all .12s;text-align:left}
+  .verzio-tab:hover{border-color:var(--keret-eros);background:var(--felulet-2)}
+  .verzio-tab.aktiv{border-color:var(--brand);background:var(--brand-tint)}
+  .verzio-tab .vszam{font-family:var(--mono);font-size:11.5px}
+  .verzio-tab .tolto{flex:1}
+
+  .hataly-sor{display:flex;justify-content:space-between;font-size:12px;color:var(--t-halk);
+    font-weight:600;margin-bottom:6px}
+  .hataly-sor b{color:var(--t-eros);font-weight:700;display:block;font-size:12.5px}
+  .hataly-vonal{height:6px;border-radius:3px;background:var(--felulet-2);position:relative;overflow:hidden}
+  .hataly-vonal .toltes{position:absolute;inset:0;border-radius:3px;
+    background:linear-gradient(90deg,var(--pozitiv),#3DC56C)}
+  .hataly-vonal .toltes.nyitott{background:linear-gradient(90deg,var(--pozitiv) 60%,rgba(11,138,53,.15))}
+  .visszavonasig{color:var(--pozitiv)}
+  .auto-hint{display:flex;gap:8px;align-items:flex-start;font-size:12px;font-weight:600;
+    color:var(--figyelem);background:var(--figyelem-bg);border-radius:var(--r-s);
+    padding:7px 10px;margin-top:9px;line-height:1.4}
+
+  .tag-chip{display:inline-block;background:var(--felulet-2);border-radius:var(--r-pill);
+    padding:3px 11px;font-size:11.5px;font-weight:600;margin:0 5px 5px 0;color:var(--t-halk)}
+
+  .kapcs-csoport{margin-bottom:10px}
+  .kapcs-csoport:last-child{margin-bottom:0}
+  .kapcs-fajta{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--t-leges);display:block;margin-bottom:4px}
+  .kapcs-link{display:block;background:none;border:none;color:var(--brand);font-size:13px;
+    font-weight:600;padding:2px 0;text-align:left}
+  .kapcs-link:hover{color:var(--brand-melyebb);text-decoration:underline;text-underline-offset:2px}
+  .kapcs-kulso{font-family:var(--mono);font-size:12px;color:var(--t-alap);display:block;padding:2px 0}
+  .bejovo{color:var(--t-halk);font-size:12px;margin-top:7px;border-top:1px dashed var(--keret);padding-top:8px}
+  .bejovo .kapcs-link{display:inline}
+
+  .audit-sor{font-size:12px;color:var(--t-halk);display:flex;flex-direction:column;gap:4px;font-weight:500}
+
+  /* ---------- Napló idővonal ---------- */
+  .ido-lista{display:flex;flex-direction:column}
+  .ido-sor{display:flex;gap:11px;position:relative;padding-bottom:13px}
+  .ido-sor:last-child{padding-bottom:0}
+  .ido-sor::before{content:'';position:absolute;left:5px;top:14px;bottom:-2px;width:2px;background:var(--keret)}
+  .ido-sor:last-child::before{display:none}
+  .ido-pont{width:12px;height:12px;border-radius:50%;flex:none;margin-top:3px;
+    border:3px solid var(--felulet);box-shadow:0 0 0 1.5px var(--keret-eros);background:var(--t-leges)}
+  .ido-tartalom{font-size:12px;min-width:0}
+  .ido-cim{font-weight:700;color:var(--t-eros);font-size:12.5px}
+  .ido-meta{color:var(--t-leges);font-weight:500}
+  .ido-megj{color:var(--t-halk);margin-top:1px}
+  .naplo-rendszer{font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--brand);
+    background:var(--brand-tint);border-radius:4px;padding:0 5px}
+
+  /* ---------- Modal ---------- */
+  .modal-hatter{position:fixed;inset:0;background:rgba(16,19,26,.55);z-index:100;
+    display:flex;align-items:center;justify-content:center;padding:20px;
+    animation:fadeIn .15s ease}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  .modal{background:#fff;border-radius:var(--r-l);box-shadow:0 24px 60px -12px rgba(16,24,40,.3);
+    padding:24px;width:100%;max-width:440px;animation:slideUp .18s ease}
+  @keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .modal h3{font-size:17px;font-weight:700;color:var(--t-eros);letter-spacing:-.01em;margin-bottom:12px}
+  .modal p{font-size:13px;color:var(--t-halk)}
+  .modal label{display:block;font-size:12.5px;font-weight:600;margin:13px 0 5px;color:var(--t-alap)}
+  .modal input[type=date],.modal input[type=text],.modal textarea,.modal select{
+    width:100%;border:1px solid var(--keret-eros);border-radius:var(--r-m);padding:8px 11px;background:#fff;
+    transition:border-color .15s}
+  .modal input:focus,.modal textarea:focus,.modal select:focus{border-color:var(--brand)}
+  .modal input:disabled{background:var(--felulet-2);color:var(--t-leges)}
+  .modal textarea{min-height:76px;resize:vertical}
+  .modal .jelolo{display:flex;align-items:center;gap:8px;font-size:13.5px;margin-top:10px;
+    color:var(--t-alap);font-weight:500}
+  .modal .jelolo input{width:17px;height:17px;accent-color:var(--brand)}
+  .modal-gombok{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}
+  .modal-gombok .btn{border-radius:var(--r-m);padding:9px 18px;font-size:13.5px;font-weight:600;border:1px solid transparent}
+  .modal-gombok .btn:not(.masodlagos){background:var(--brand);color:#fff}
+  .modal-gombok .btn:not(.masodlagos):hover{background:var(--brand-hover)}
+  .modal-gombok .btn.masodlagos{background:#fff;border-color:var(--keret-eros);color:var(--t-alap)}
+  .modal-gombok .btn.masodlagos:hover{background:var(--felulet-2)}
+  .modal .hiba{color:var(--negativ);background:var(--negativ-bg);border-radius:var(--r-s);
+    font-size:12.5px;font-weight:600;margin-top:10px;padding:7px 11px;display:none}
+
+  /* ---------- Toast ---------- */
+  #toast{position:fixed;bottom:22px;right:22px;transform:translateY(8px);
+    background:var(--t-eros);color:#fff;border-radius:var(--r-m);padding:11px 16px;
+    font-size:13px;font-weight:500;opacity:0;pointer-events:none;
+    transition:opacity .2s,transform .2s;z-index:200;max-width:380px;box-shadow:var(--arnyek-m)}
+  #toast.lathato{opacity:1;transform:none}
+
+  /* ---------- Szolgáltatás-áttekintés ---------- */
+  .att-gomb{display:flex;justify-content:space-between;align-items:center;gap:8px;
+    border:1px solid var(--keret);background:#fff;border-radius:var(--r-m);
+    padding:9px 12px;font-size:12.5px;font-weight:500;color:var(--t-alap);transition:all .12s;width:100%}
+  .att-gomb b{font-weight:700;color:var(--t-eros)}
+  .att-gomb:hover{border-color:var(--brand);background:var(--brand-tint)}
+  .att-gomb .nyil{color:var(--t-leges)}
+  .attekintes{padding:28px;max-width:1080px}
+  .szolg-cimke{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand)}
+  .szolg-fej h2{font-size:26px;font-weight:700;letter-spacing:-.02em;color:var(--t-eros);margin:4px 0 6px}
+  .szolg-fej p{font-size:14px;color:var(--t-halk);max-width:640px}
+  .szolg-alcim{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--t-leges);margin:26px 0 12px}
+  .app-racs{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px}
+  .app-kartya{background:var(--felulet);border:1px solid var(--keret);border-radius:var(--r-l);
+    box-shadow:var(--arnyek-s);padding:18px 20px;transition:box-shadow .15s,border-color .15s}
+  .app-kartya:hover{box-shadow:var(--arnyek-m);border-color:var(--keret-eros)}
+  .app-fej{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .app-nev{font-size:16.5px;font-weight:700;letter-spacing:-.01em;color:var(--t-eros)}
+  .app-leiras{font-size:13px;color:var(--t-halk);margin:10px 0 13px}
+  .app-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:12.5px;
+    color:var(--t-alap);font-weight:600;border-top:1px solid var(--keret);padding-top:12px}
+  .app-meta b{display:block;font-size:10px;font-weight:700;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--t-leges);margin-bottom:1px}
+  .stat-sor{display:flex;flex-wrap:wrap;gap:5px;margin-top:13px}
+  .morzsa-sor{display:flex;align-items:center;gap:7px;margin-bottom:8px;font-size:11.5px;color:var(--t-leges)}
+  .morzsa-sor button{background:none;border:none;padding:0;font-size:11.5px;font-weight:600;
+    color:var(--t-halk)}
+  .morzsa-sor button:hover{color:var(--brand);text-decoration:underline;text-underline-offset:2px}
+  .morzsa-sor .kulcs-chip{margin-bottom:0}
+
+  /* ---------- Kapcsolati gráf ---------- */
+  .gomb.aktiv{background:var(--brand-tint);border-color:var(--brand);color:var(--brand)}
+  .graf-wrap{display:flex;flex-direction:column;height:calc(100vh - 58px);min-height:480px}
+  .graf-eszkoztar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    padding:12px 18px;border-bottom:1px solid var(--keret);background:var(--felulet)}
+  .graf-cim{font-size:14px;font-weight:700;color:var(--t-eros);letter-spacing:-.01em}
+  .graf-szeg{flex:none;width:auto}
+  .graf-szeg button{padding:6px 12px;white-space:nowrap}
+  .graf-szeg button:disabled{opacity:.45;cursor:not-allowed}
+  #grafSvg{flex:1;width:100%;min-height:0;display:block;cursor:grab;touch-action:none;
+    background:radial-gradient(circle,#DEE3EB 1px,transparent 1px);background-size:26px 26px}
+  #grafSvg:active{cursor:grabbing}
+  .graf-cs{cursor:pointer;transition:opacity .15s}
+  .graf-cs:hover rect:first-child{stroke:var(--brand)}
+  .graf-cs.kijelolt rect:first-child{filter:drop-shadow(0 2px 7px rgba(66,88,237,.35))}
+  .graf-el{transition:opacity .15s}
+  .graf-cs.tompa,.graf-el.tompa{opacity:.16}
+  .vonal-minta{display:inline-block;width:22px;height:0;border-top:2.5px solid var(--c,#5C6677);
+    border-top-style:var(--st,solid);vertical-align:middle;margin-right:6px;
+    -webkit-mask:none}
+  .vonal-minta[style*='--d']{border-top-style:dashed}
+  .graf-chip{display:inline-flex;align-items:center}
+  .graf-jelmagyarazat{display:flex;gap:7px 22px;flex-wrap:wrap;align-items:center;
+    padding:9px 18px;border-top:1px solid var(--keret);background:var(--felulet);
+    font-size:11.5px;color:var(--t-halk);font-weight:500}
+  .graf-jelmagyarazat b{color:var(--t-eros);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+  .graf-jelmagyarazat i{font-style:normal}
+  .pont-minta{display:inline-block;width:9px;height:9px;border-radius:50%;
+    background:var(--pozitiv);vertical-align:middle;margin-right:6px}
+  .graf-jelmagyarazat .halk{color:var(--t-leges);width:100%}
+
+  /* ---------- Beágyazott tartalom (markdown) ---------- */
+  .md-tabla{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0 10px}
+  .md-tabla th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.05em;
+    text-transform:uppercase;color:var(--t-halk);background:var(--felulet-2);
+    padding:7px 10px;border-bottom:1px solid var(--keret-eros)}
+  .md-tabla td{padding:6px 10px;border-bottom:1px solid var(--keret)}
+  .md-tabla tr:last-child td{border-bottom:none}
+  .md-kod{background:#1E2430;color:#E5EAF2;border-radius:var(--r-m);padding:13px 15px;
+    font-family:var(--mono);font-size:12px;line-height:1.55;overflow-x:auto;
+    margin:6px 0 10px;position:relative}
+  .md-kod::before{content:attr(data-nyelv);position:absolute;top:7px;right:11px;
+    font-family:var(--sans);font-size:9.5px;font-weight:700;letter-spacing:.08em;
+    text-transform:uppercase;color:#8C99AD}
+  .md-mermaid{background:var(--felulet-2);border:1px solid var(--keret);
+    border-radius:var(--r-m);padding:12px;margin:6px 0 10px;overflow-x:auto}
+  .md-mermaid pre.mermaid{font-family:var(--mono);font-size:11.5px;color:var(--t-halk);
+    margin:0;white-space:pre-wrap}
+  .md-mermaid svg{max-width:100%;height:auto}
+  .md-mermaid-fallback{font-size:11px;color:var(--t-leges);margin-top:6px;font-style:italic}
+
+  /* ---------- Szerkesztő és mellékletek ---------- */
+  .blokk-cim-sor{display:flex;align-items:center;gap:10px}
+  .szerk-gomb{margin-left:auto;border:1px solid var(--keret-eros);background:#fff;
+    border-radius:var(--r-pill);padding:2px 11px;font-size:11px;font-weight:700;
+    color:var(--brand);letter-spacing:0;text-transform:none}
+  .szerk-gomb:hover{border-color:var(--brand);background:var(--brand-tint)}
+  .zar-hint{margin-left:auto;font-size:10.5px;font-weight:600;color:var(--t-leges);
+    letter-spacing:0;text-transform:none;cursor:help}
+  .szerk-blokk{border-color:var(--brand-border-subtle, #929EFF)}
+  .szerk-fej{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+  .szerk-fej .tolto{flex:1}
+  .szerk-cimke{display:block;font-size:12px;font-weight:600;color:var(--t-halk);margin:11px 0 5px}
+  #szerkRovid{width:100%;border:1px solid var(--keret-eros);border-radius:var(--r-m);padding:8px 11px}
+  .szerk-eszkoz{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 7px}
+  .szerk-eszkoz select{border:1px solid var(--keret);border-radius:var(--r-pill);
+    padding:3px 9px;font-size:11.5px;font-weight:600;color:var(--t-halk);background:#fff;max-width:220px}
+  #szerkLeiras{width:100%;min-height:220px;resize:vertical;border:1px solid var(--keret-eros);
+    border-radius:var(--r-m);padding:11px 13px;font-family:var(--mono);font-size:12.5px;line-height:1.6}
+  #szerkLeiras:focus{border-color:var(--brand)}
+  .szerk-mezo-kicsi{width:100%;min-height:62px;resize:vertical;border:1px solid var(--keret-eros);
+    border-radius:var(--r-m);padding:9px 12px;font-family:var(--mono);font-size:12px;line-height:1.55}
+  .szerk-mezo-kicsi:focus{border-color:var(--brand);outline:none}
+  .szerk-elonezet{border:1px dashed var(--keret-eros);border-radius:var(--r-m);
+    padding:13px 15px;background:var(--bg)}
+  .mell-sor{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--keret)}
+  .mell-sor:last-of-type{border-bottom:none}
+  .mell-ikon{width:30px;height:30px;border-radius:8px;flex:none;display:flex;align-items:center;
+    justify-content:center;font-size:13px;background:var(--felulet-2)}
+  .mell-ikon-figma{background:#1E1E1E;color:#fff;font-weight:800;font-size:14px}
+  .mell-sor-szoveg{flex:1;min-width:0;font-size:12.5px}
+  .mell-sor-szoveg b{color:var(--t-eros);font-weight:600;display:block;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .mell-meta{font-size:11px;color:var(--t-leges);font-weight:500}
+  .mell-link{color:var(--brand);font-weight:700;text-decoration:none;font-size:13px;flex:none}
+  .mell-link:hover{text-decoration:underline;text-underline-offset:2px}
+  .mell-gombsor{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .mell-feltolt{cursor:pointer}
+  .mell-zar{font-size:11px;color:var(--t-leges);font-style:italic;margin-top:9px}
+  .mell-belyeg{width:46px;height:34px;border-radius:6px;overflow:hidden;flex:none;
+    border:1px solid var(--keret);background:var(--felulet-2)}
+  .mell-belyeg img{width:100%;height:100%;object-fit:cover;display:block}
+  .mell-sor-kart{cursor:pointer;border-radius:8px;padding-left:6px;padding-right:6px;margin:0 -6px;
+    transition:background .12s}
+  .mell-sor-kart:hover{background:var(--brand-tint, #EEF1FF)}
+  .mell-kep{margin:8px 0 12px}
+  .mell-kep img{max-width:100%;border-radius:var(--r-m);border:1px solid var(--keret);display:block}
+  .mell-kep figcaption{font-size:11.5px;color:var(--t-leges);font-weight:500;margin-top:5px}
+  .mell-figma{border:1px solid var(--keret);border-radius:var(--r-m);overflow:hidden;margin:8px 0 12px;background:#fff}
+  .mell-figma-fej{display:flex;align-items:center;gap:11px;padding:10px 13px;font-size:13px}
+  .mell-figma-fej>div{flex:1;min-width:0}
+  .mell-figma-fej b{color:var(--t-eros)}
+  .figma-jel{width:30px;height:30px;border-radius:8px;background:#1E1E1E;color:#fff;flex:none;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px}
+  .mell-figma img{width:100%;display:block;border-top:1px solid var(--keret)}
+  .mell-figma-hely{border-top:1px dashed var(--keret-eros);background:var(--felulet-2);
+    padding:22px 16px;font-size:12px;color:var(--t-leges);text-align:center;font-style:italic}
+  .mell-csv{margin:8px 0 12px}
+  .mell-kiemel{outline:2px solid var(--brand);outline-offset:3px;border-radius:8px}
+
+  /* ---------- Szolgáltatás / alkalmazás kartoték ---------- */
+  .szolg-valaszto{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+  .chip-uj{border-style:dashed;font-weight:700;color:var(--brand)}
+  .chip-uj:hover{border-color:var(--brand);background:var(--brand-tint, #EEF1FF)}
+  .szolg-fej-gombok{margin-top:14px}
+  .szolg-alcim-sor{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:24px 0 12px}
+  .szolg-alcim-sor .szolg-alcim{margin:0}
+  .gomb.kicsi{padding:6px 13px;font-size:12.5px}
+  .app-fej-gombok{display:flex;align-items:center;gap:8px}
+  .ikon-gomb{border:1px solid var(--keret-eros);background:#fff;border-radius:var(--r-pill);
+    padding:5px 12px;font-size:11.5px;font-weight:700;color:var(--t-halk);cursor:pointer;
+    letter-spacing:0;text-transform:none}
+  .ikon-gomb:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-tint, #EEF1FF)}
+  .kart-meta{display:flex;flex-direction:column;gap:9px}
+  .kart-meta span{display:flex;justify-content:space-between;gap:14px;font-size:12.5px;
+    color:var(--t-eros);padding-bottom:9px;border-bottom:1px solid var(--keret)}
+  .kart-meta span:last-child{border-bottom:none;padding-bottom:0}
+  .kart-meta b{color:var(--t-leges);font-weight:600}
+  .kart-naplo{display:flex;flex-direction:column;gap:8px}
+  .kart-naplo-sor{display:grid;grid-template-columns:auto auto 1fr;gap:9px;font-size:12px;align-items:baseline}
+  .kn-datum{color:var(--t-leges);white-space:nowrap}
+  .kn-ki{font-weight:600;color:var(--t-eros);white-space:nowrap}
+  .kn-megj{color:var(--t-halk)}
+
+  @media (prefers-reduced-motion: reduce){*{transition:none !important;animation:none !important}}
+  /* ---------- Kapcsolat-szerkesztő ---------- */
+  .kapcs-sor-szerk{display:flex;align-items:center;gap:6px;padding:3px 0}
+  .kapcs-sor-szerk .kapcs-link{flex:1;padding:0}
+  .kapcs-sor-szerk .kapcs-kulso{flex:1}
+  .kapcs-torol{flex:none;width:20px;height:20px;border-radius:6px;border:1px solid var(--keret);
+    background:#fff;color:var(--t-leges);font-size:13px;line-height:1;cursor:pointer;display:flex;
+    align-items:center;justify-content:center;transition:all .12s}
+  .kapcs-torol:hover{border-color:#F3B6AE;background:var(--negativ-bg);color:var(--negativ)}
+  .kapcs-add{margin-top:10px;width:100%;border:1px dashed var(--keret-eros);background:#fff;
+    border-radius:var(--r-m);padding:7px;font-size:12px;font-weight:700;color:var(--brand);
+    cursor:pointer;transition:all .12s}
+  .kapcs-add:hover{border-color:var(--brand);background:var(--brand-tint)}
+  .kapcs-zar{font-size:11px;color:var(--t-leges);font-style:italic;margin-top:9px}
+  .modal .kapcs-mezo-sor{display:flex;gap:9px}
+  .modal .kapcs-mezo-sor>div{flex:1}
+
+  /* ---------- Címke chip-szerkesztő ---------- */
+  .cimke-szerk-fej{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+  .cimke-szerk-fej .tolto{flex:1}
+  .cimke-szerk-gomb{border:1px solid var(--keret-eros);background:#fff;border-radius:var(--r-pill);
+    padding:2px 10px;font-size:11px;font-weight:700;color:var(--brand);cursor:pointer;flex:none}
+  .cimke-szerk-gomb:hover{border-color:var(--brand);background:var(--brand-tint)}
+  .tag-chip-szerk{display:inline-flex;align-items:center;gap:5px;background:var(--felulet-2);
+    border-radius:var(--r-pill);padding:3px 5px 3px 11px;font-size:12px;color:var(--t-alap);
+    margin:0 5px 5px 0;font-weight:500}
+  .tag-chip-x{width:16px;height:16px;border-radius:50%;border:none;background:transparent;
+    color:var(--t-leges);font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;flex:none}
+  .tag-chip-x:hover{background:var(--negativ-bg);color:var(--negativ)}
+  .cimke-uj-sor{display:flex;gap:6px;margin-top:6px}
+  .cimke-uj-sor input{flex:1;border:1px solid var(--keret-eros);border-radius:var(--r-m);
+    padding:6px 10px;font-size:12.5px;font-family:var(--sans)}
+  .cimke-uj-sor input:focus{border-color:var(--brand);outline:none}
+  .cimke-keszlet{margin-top:8px;display:flex;flex-wrap:wrap;gap:5px}
+  .cimke-javaslat{border:1px solid var(--keret);background:#fff;border-radius:var(--r-pill);
+    padding:2px 10px;font-size:11.5px;color:var(--t-halk);cursor:pointer;transition:all .12s}
+  .cimke-javaslat:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-tint)}
+  .cimke-keszlet-cim{font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--t-leges);width:100%;margin-bottom:1px}
+
+  /* ---------- Videó melléklet ---------- */
+  .mell-ikon-video{background:#2A2140;color:#fff;font-size:13px}
+  .mell-video{margin:8px 0 12px;border:1px solid var(--keret);border-radius:var(--r-m);overflow:hidden;background:#000}
+  .mell-video video{width:100%;display:block;max-height:420px}
+  .mell-video-cim{font-size:11.5px;color:var(--t-leges);font-weight:500;margin-top:5px;padding:0 2px}
+
+  /* ---------- WYSIWYG (TipTap) réteg ---------- */
+  .szerk-mod-valto{display:inline-flex;border:1px solid var(--keret-eros);border-radius:var(--r-pill);
+    overflow:hidden;margin-bottom:7px}
+  .szerk-mod-valto button{border:none;background:#fff;padding:4px 14px;font-size:11.5px;font-weight:700;
+    color:var(--t-halk);cursor:pointer;font-family:var(--sans)}
+  .szerk-mod-valto button.aktiv{background:var(--brand);color:#fff}
+  .szerk-mod-valto button:disabled{color:var(--keret-eros);cursor:not-allowed}
+  .wysiwyg-keret{border:1px solid var(--keret-eros);border-radius:var(--r-m);overflow:hidden}
+  .wysiwyg-eszkoz{display:flex;gap:2px;flex-wrap:wrap;padding:6px 8px;border-bottom:1px solid var(--keret);
+    background:var(--felulet-2)}
+  .wysiwyg-eszkoz button{border:none;background:transparent;border-radius:6px;min-width:28px;height:28px;
+    padding:0 7px;font-size:13px;font-weight:700;color:var(--t-alap);cursor:pointer;font-family:var(--sans)}
+  .wysiwyg-eszkoz button:hover{background:var(--brand-tint)}
+  .wysiwyg-eszkoz button.aktiv{background:var(--brand-tint-2);color:var(--brand)}
+  .wysiwyg-eszkoz .valaszto{width:1px;background:var(--keret);margin:2px 4px}
+  .wysiwyg .ProseMirror{min-height:200px;max-height:440px;overflow:auto;padding:13px 15px;
+    font-size:13.5px;line-height:1.65;outline:none}
+  .wysiwyg .ProseMirror:focus{outline:none}
+  .wysiwyg .ProseMirror>*:first-child{margin-top:0}
+  .wysiwyg .ProseMirror p{margin:0 0 9px}
+  .wysiwyg .ProseMirror h1{font-size:19px;font-weight:700;margin:14px 0 8px}
+  .wysiwyg .ProseMirror h2{font-size:16px;font-weight:700;margin:13px 0 7px}
+  .wysiwyg .ProseMirror h3{font-size:14px;font-weight:700;margin:12px 0 6px}
+  .wysiwyg .ProseMirror ul,.wysiwyg .ProseMirror ol{margin:0 0 9px;padding-left:22px}
+  .wysiwyg .ProseMirror li{margin:2px 0}
+  .wysiwyg .ProseMirror blockquote{border-left:3px solid var(--keret-eros);padding-left:12px;
+    color:var(--t-halk);margin:0 0 9px}
+  .wysiwyg .ProseMirror pre{background:var(--lezart);color:#E8EAF0;border-radius:var(--r-s);
+    padding:10px 13px;font-family:var(--mono);font-size:12px;overflow:auto;margin:0 0 9px}
+  .wysiwyg .ProseMirror code{background:var(--felulet-2);border-radius:4px;padding:1px 5px;
+    font-family:var(--mono);font-size:.92em}
+  .wysiwyg .ProseMirror pre code{background:none;padding:0}
+  .wysiwyg .ProseMirror table{border-collapse:collapse;width:100%;margin:0 0 9px;font-size:12.5px}
+  .wysiwyg .ProseMirror th,.wysiwyg .ProseMirror td{border:1px solid var(--keret-eros);padding:5px 8px;text-align:left}
+  .wysiwyg .ProseMirror th{background:var(--felulet-2);font-weight:600}
+  .wysiwyg .ProseMirror a{color:var(--brand);text-decoration:underline;text-underline-offset:2px}
+  /* melléklet-hivatkozás chip a vizuális szerkesztőben (a markdown ![..](melleklet:..) marad) */
+  .wysiwyg .ProseMirror img[src^="melleklet:"]{display:inline-block;width:auto;height:24px;
+    vertical-align:middle;padding:0;outline:1px solid var(--brand);outline-offset:2px;border-radius:4px}
+  .wysiwyg-jel{font-size:11px;color:var(--t-leges);padding:6px 10px;border-top:1px solid var(--keret);
+    background:var(--felulet-2);font-style:italic}
+  .wysiwyg-hiba{font-size:11.5px;color:var(--figyelem);background:var(--figyelem-bg);
+    border-radius:var(--r-s);padding:7px 10px;margin-bottom:7px}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
+<!-- TipTap WYSIWYG: CDN-ből (ES module). Ha nem tölthető be (offline), a szerkesztő a markdown-forrás módban marad. -->
+<script type="module">
+  window.__tiptap = {ok:false, hiba:null};
+  window.__tiptapReady = (async () => {
+    try{
+      const [core, sk, md, table, trow, tcell, theader, image, link] = await Promise.all([
+        import('https://esm.sh/@tiptap/core@2.11.5'),
+        import('https://esm.sh/@tiptap/starter-kit@2.11.5'),
+        import('https://esm.sh/tiptap-markdown@0.8.10'),
+        import('https://esm.sh/@tiptap/extension-table@2.11.5'),
+        import('https://esm.sh/@tiptap/extension-table-row@2.11.5'),
+        import('https://esm.sh/@tiptap/extension-table-cell@2.11.5'),
+        import('https://esm.sh/@tiptap/extension-table-header@2.11.5'),
+        import('https://esm.sh/@tiptap/extension-image@2.11.5'),
+        import('https://esm.sh/@tiptap/extension-link@2.11.5')
+      ]);
+      window.__tiptap = {
+        ok:true, hiba:null,
+        Editor: core.Editor,
+        StarterKit: sk.default,
+        Markdown: md.Markdown,
+        Table: table.Table, TableRow: trow.TableRow, TableCell: tcell.TableCell, TableHeader: theader.TableHeader,
+        Image: image.Image, Link: link.Link
+      };
+    }catch(e){
+      window.__tiptap = {ok:false, hiba:String(e)};
+    }
+    return window.__tiptap;
+  })();
+</script>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-jel" aria-hidden="true"></div>
+    <div><h1>Kartoték</h1><div class="al">FAIR &middot; 3R Rendezvényregisztráció</div></div>
+  </div>
+  <div class="kereso-wrap">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input class="kereso" id="kereso" type="search" placeholder="Keresés kulcsra, címre, címkére">
+    <kbd>Ctrl K</kbd>
+  </div>
+  <div class="header-spacer"></div>
+  <div class="hctrl"><span>Mai nap</span><input type="date" id="simDatum" value="2026-06-12"></div>
+  <button class="gomb masodlagos" id="btnUtemezo" title="Dátumvezérelt AUTO átmenetek végrehajtása">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Ütemező
+  </button>
+  <button class="gomb masodlagos" id="btnGraf" aria-pressed="false" title="Kapcsolati gráf nézet">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="6" r="2.6"/><circle cx="19" cy="6" r="2.6"/><circle cx="12" cy="18" r="2.6"/><path d="M6.8 7.8 10.5 16M17.2 7.8 13.5 16M7.6 6h8.8"/></svg>Gráf
+  </button>
+  <div class="hctrl"><select id="szerepkor" aria-label="Szerepkör">
+    <option>Szerző</option><option>Jóváhagyó</option><option>Admin</option>
+  </select></div>
+  <button class="gomb elsodleges" id="btnUjElem">+ Új elem</button>
+</header>
+
+<div class="layout">
+  <aside>
+    <div class="panel-fej">
+      <button class="att-gomb" id="btnAttekintes">
+        <span><b>FAIR</b> · szolgáltatás-áttekintés</span><span class="nyil">→</span>
+      </button>
+      <div class="szuro-sor" id="alkValaszto"></div>
+      <div class="szegmens" id="statuszTabok"></div>
+      <div class="szuro-sor" id="tipusSzurok"></div>
+    </div>
+    <div class="lista" id="lista"></div>
+  </aside>
+  <main id="fo"></main>
+</div>
+
+<div id="modalGyoker"></div>
+<div id="toast" role="status"></div>
+
+<script>
+/* ============ ADATOK ============ */
+const TIPUSOK = {
+  BUS:{nev:'Üzleti User Story', uzleti:true},
+  TUC:{nev:'Technikai Use Case', uzleti:false},
+  F:  {nev:'Feature', uzleti:false},
+  TUS:{nev:'Technikai User Story', uzleti:false},
+  BD: {nev:'Üzleti dokumentum', uzleti:true},
+  TD: {nev:'Technikai dokumentum', uzleti:false}
+};
+const RETEGEK = ['FE','Core','TAPI','TDB'];
+const SZABALYZATOK = {
+  'IB-XYT-14-1213':{nev:'Account management in back office systems'}
+};
+let SZOLGALTATASOK = [
+  {kod:'FAIR', nev:'FAIR üzleti szolgáltatás',
+   leiras:'Követelmény- és dokumentumnyilvántartás a FAIR szolgáltatás alá tartozó alkalmazásokhoz.',
+   felelos:'Nagy Péter', letrehozva:'2025-09-01', modositotta:'Nagy Péter',
+   naplo:[{mikor:'2025-09-01', ki:'Nagy Péter', megj:'szolgáltatás létrehozása'}]}
+];
+let ALKALMAZASOK = [
+  {kod:'3R', szolg:'FAIR', nev:'Rendezvényregisztrációs rendszer',
+   leiras:'Rendezvényregisztrációs rendszer az NFK megrendelésére.',
+   retegek:['FE','Core'], lastRelease:'R5 · 2026. 05. 28.', lastVersion:'1.4.2',
+   felelos:'Kiss Anna', letrehozva:'2025-10-01', modositotta:'Kiss Anna',
+   naplo:[{mikor:'2025-10-01', ki:'Kiss Anna', megj:'alkalmazás létrehozása'}]},
+  {kod:'Terminus', szolg:'FAIR', nev:'Terminus',
+   leiras:'Önálló alkalmazás: a regisztrációs adatok fogadását és tárolását végző háttérszolgáltatás.',
+   retegek:['TAPI','TDB'], lastRelease:'R2 · 2026. 04. 14.', lastVersion:'0.9.1',
+   felelos:'Varga Dóra', letrehozva:'2025-11-15', modositotta:'Varga Dóra',
+   naplo:[{mikor:'2025-11-15', ki:'Varga Dóra', megj:'alkalmazás létrehozása'}]}
+];
+const alkById = kod => ALKALMAZASOK.find(a => a.kod === kod);
+const szolgById = kod => SZOLGALTATASOK.find(s => s.kod === kod);
+
+let ELEMEK = [
+  {
+    kulcs:'3R-BUS-001', tipus:'BUS', reteg:null, cim:'Papíralapú regisztráció',
+    tagek:['regisztráció','kivezetett'],
+    verziok:[{
+      v:1, statusz:'Elavult', rovid:'A vendégek papíralapú jelentkezési lapon regisztrálnak.',
+      leiras:'A helyszíni hostess papíralapú jelentkezési lapot ad át a vendégnek, amelyet kitöltve a regisztrációs pultnál kell leadni.',
+      elofeltetelek:'', kriteriumok:'', cia:null,
+      hatalyKezdet:'2025-01-10', hatalyVeg:'2026-02-01',
+      letrehozva:'2024-12-02', modositotta:'Kiss Anna',
+      naplo:[
+        {mikor:'2024-12-02', ki:'Kiss Anna', honnan:'—', hova:'Vázlat', megj:'létrehozás'},
+        {mikor:'2024-12-10', ki:'Kiss Anna', honnan:'Vázlat', hova:'Véleményezés', megj:''},
+        {mikor:'2024-12-18', ki:'Nagy Péter', honnan:'Véleményezés', hova:'Jóváhagyott', megj:'hatály: 2025-01-10 –'},
+        {mikor:'2025-01-10', ki:'RENDSZER', honnan:'Jóváhagyott', hova:'Hatályos', megj:'kezdődátum elérve'},
+        {mikor:'2026-02-01', ki:'RENDSZER', honnan:'Hatályos', hova:'Elavult', megj:'leváltotta: 3R-BUS-002'}
+      ]
+    }]
+  },
+  {
+    kulcs:'3R-BUS-002', tipus:'BUS', reteg:null, cim:'Regisztráció az eseményre',
+    tagek:['regisztráció','üzleti'],
+    verziok:[
+      {
+        v:1, statusz:'Hatályos',
+        rovid:'A Vendég regisztrációjának folyamata.',
+        leiras:'Vendégként szeretnék visszaigazoltan regisztrálni az eseményre annak érdekében, hogy részt tudjak venni rajta.\n\nElvárt lépések:\n1. A regisztráció gombra kattintok, hogy megadhassam a regisztrációs adataimat.\n2. Kitöltés: megadom a regisztrációs azonosítót (név, e-mail cím), megismerem a GDPR-nyilatkozatot és nyilatkozom, majd kitöltöm és elküldöm a regisztrációs űrlapot.\n3. A regisztráció biztonsága érdekében megerősítő e-mailt kapok. Ha már korábban regisztráltam erre az eseményre, e-mailben kapok visszajelzést, hogy milyen címmel és mikor regisztráltam.\n4. A folyamat végén újabb e-mail tájékoztat a regisztráció sikerességéről, benne a módosítási és törlési linkekkel.\n\nAz űrlap vázlata:\n\n![Az űrlap vázlata](melleklet:M2)',
+        elofeltetelek:'Az esemény nyilvános regisztrációs felülete elérhető. A vendég nem érte el az esemény létszámkorlátját.',
+        kriteriumok:'A megerősítő e-mail 2 percen belül kiküldésre kerül. A GDPR-nyilatkozat elfogadása nélkül a regisztráció nem küldhető be.',
+        cia:null,
+        hatalyKezdet:'2026-02-01', hatalyVeg:null,
+        letrehozva:'2026-01-05', modositotta:'Kiss Anna',
+        mellekletek:[
+          {id:'M1', fajta:'figma', nev:'Regisztrációs űrlap — desktop frame',
+           forrasUrl:'https://www.figma.com/design/PELDA/3R-tervek?node-id=12-34', kep:null,
+           feltolto:'Kiss Anna', mikor:'2026-01-10'},
+          {id:'M2', fajta:'kep', nev:'urlap-vazlat.svg',
+           adat:'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="420" height="200"><rect width="420" height="200" rx="12" fill="#F2F4F8"/><rect x="30" y="26" width="200" height="14" rx="4" fill="#9AA3B2"/><rect x="30" y="56" width="360" height="26" rx="6" fill="#fff" stroke="#D3D9E3"/><rect x="30" y="94" width="360" height="26" rx="6" fill="#fff" stroke="#D3D9E3"/><rect x="30" y="132" width="14" height="14" rx="3" fill="#fff" stroke="#4258ED"/><rect x="52" y="134" width="180" height="10" rx="3" fill="#9AA3B2"/><rect x="290" y="158" width="100" height="28" rx="14" fill="#4258ED"/></svg>'),
+           feltolto:'Kiss Anna', mikor:'2026-01-08'}
+        ],
+        naplo:[
+          {mikor:'2026-01-05', ki:'Kiss Anna', honnan:'—', hova:'Vázlat', megj:'létrehozás'},
+          {mikor:'2026-01-12', ki:'Kiss Anna', honnan:'Vázlat', hova:'Véleményezés', megj:''},
+          {mikor:'2026-01-20', ki:'Nagy Péter', honnan:'Véleményezés', hova:'Jóváhagyott', megj:'hatály: 2026-02-01 – visszavonásig'},
+          {mikor:'2026-02-01', ki:'RENDSZER', honnan:'Jóváhagyott', hova:'Hatályos', megj:'kezdődátum elérve'}
+        ]
+      },
+      {
+        v:2, statusz:'Vázlat',
+        rovid:'A Vendég regisztrációjának folyamata, QR-kódos beléptetéssel kiegészítve.',
+        leiras:'A v1 folyamat kiegészítése: a sikeres regisztrációt visszaigazoló e-mail QR-kódot is tartalmaz, amellyel a helyszíni beléptetés gyorsítható.\n\nA regisztrációs űrlap aktuális Figma-terve (a verzió jóváhagyásakor pillanatkép fagyasztásra kerül):\n\n![Regisztációs űrlap](melleklet:M4)',
+        elofeltetelek:'Az esemény nyilvános regisztrációs felülete elérhető.',
+        kriteriumok:'A QR-kód egyedi és a regisztráció törlésekor érvényét veszti.',
+        cia:null,
+        hatalyKezdet:null, hatalyVeg:null,
+        letrehozva:'2026-06-01', modositotta:'Kiss Anna',
+        mellekletek:[
+          {id:'M4', fajta:'figma', nev:'Regisztációs űrlap (3R Figma terv)',
+           forrasUrl:'https://www.figma.com/design/fJ63JKtYC0OvFoY3UMCLI7/Rendezv%C3%A9ny-oldal?node-id=297%3A4125',
+           kep:'data:image/png;base64,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',
+           feltolto:'Kiss Anna', mikor:'2026-06-12'}
+        ],
+        naplo:[{mikor:'2026-06-01', ki:'Kiss Anna', honnan:'—', hova:'Vázlat', megj:'új verzió nyitása (v1 alapján)'}]
+      }
+    ]
+  },
+  {
+    kulcs:'3R-TUC-001', tipus:'TUC', reteg:null, cim:'Megerősítő e-mail forgatókönyv',
+    tagek:['e-mail','forgatókönyv'],
+    verziok:[{
+      v:1, statusz:'Jóváhagyott',
+      rovid:'A regisztráció e-mailes megerősítésének fő-, alternatív és hibaága.',
+      leiras:'Fő ág:\n1. A rendszer megerősítő e-mailt küld a megadott címre.\n2. A vendég a linkre kattintva megerősíti a regisztrációt.\n3. A rendszer kiküldi a sikerességet visszaigazoló e-mailt a módosító és törlő linkekkel.\n\nAlternatív ág (duplikált regisztráció):\n• Ha az e-mail címmel már van regisztráció erre az eseményre, a rendszer tájékoztató e-mailt küld a korábbi regisztráció címéről és időpontjáról.\n\nHibaág:\n• Ha az e-mail nem kézbesíthető, a rendszer 3 alkalommal újrapróbálkozik, majd hibanaplóba ír.\n\nA forgatókönyv folyamatábrája:\n\n```mermaid\nflowchart TD\n  A[Űrlap beküldve] --> B[Megerősítő e-mail küldése]\n  B --> C{Kattintott a linkre?}\n  C -->|igen| D[Visszaigazoló e-mail küldése]\n  C -->|duplikált cím| E[Tájékoztató a korábbi regisztrációról]\n  B -->|kézbesítési hiba| F[3x újrapróbálkozás, majd hibanapló]\n```',
+      elofeltetelek:'A vendég beküldte a regisztrációs űrlapot.',
+      kriteriumok:'Az újraküldési kísérletek között legalább 5 perc telik el.',
+      cia:null,
+      hatalyKezdet:'2026-06-20', hatalyVeg:null,
+      letrehozva:'2026-04-08', modositotta:'Tóth Bence',
+      naplo:[
+        {mikor:'2026-04-08', ki:'Tóth Bence', honnan:'—', hova:'Vázlat', megj:'létrehozás'},
+        {mikor:'2026-05-04', ki:'Tóth Bence', honnan:'Vázlat', hova:'Véleményezés', megj:''},
+        {mikor:'2026-05-15', ki:'Nagy Péter', honnan:'Véleményezés', hova:'Jóváhagyott', megj:'hatály: 2026-06-20 – visszavonásig'}
+      ]
+    }]
+  },
+  {
+    kulcs:'3R-F-001', tipus:'F', reteg:null, cim:'E-mail-értesítések',
+    tagek:['e-mail','képesség'],
+    verziok:[{
+      v:1, statusz:'Hatályos',
+      rovid:'A rendszer tranzakciós e-mail küldési képessége.',
+      leiras:'A rendszer sablon alapú tranzakciós e-maileket küld: megerősítés, sikeres regisztráció, duplikáció-értesítés, törlés-visszaigazolás.',
+      elofeltetelek:'', kriteriumok:'Minden kimenő e-mail naplózott.', cia:null,
+      hatalyKezdet:'2026-03-01', hatalyVeg:null,
+      letrehozva:'2026-02-02', modositotta:'Szabó Júlia',
+      naplo:[
+        {mikor:'2026-02-02', ki:'Szabó Júlia', honnan:'—', hova:'Vázlat', megj:'létrehozás'},
+        {mikor:'2026-02-10', ki:'Szabó Júlia', honnan:'Vázlat', hova:'Véleményezés', megj:''},
+        {mikor:'2026-02-20', ki:'Nagy Péter', honnan:'Véleményezés', hova:'Jóváhagyott', megj:'hatály: 2026-03-01 – visszavonásig'},
+        {mikor:'2026-03-01', ki:'RENDSZER', honnan:'Jóváhagyott', hova:'Hatályos', megj:'kezdődátum elérve'}
+      ]
+    }]
+  },
+  {
+    kulcs:'3R-FE-TUS-002', tipus:'TUS', reteg:'FE', cim:'Regisztrációs űrlap validáció és beküldés',
+    tagek:['űrlap','validáció'],
+    verziok:[{
+      v:1, statusz:'Vázlat',
+      rovid:'Kliensoldali mezővalidáció és a beküldés folyamata.',
+      leiras:'Az űrlap kötelező mezői: név, e-mail cím, GDPR-nyilatkozat. A beküldés gomb csak érvényes kitöltés esetén aktív. Hibás mezőnél a hibaüzenet a mező alatt jelenik meg.',
+      elofeltetelek:'A 3R-BD-001 szerinti űrlapdefiníció rendelkezésre áll.',
+      kriteriumok:'A validációs hibaüzenetek akadálymentesen (aria-describedby) kapcsolódnak a mezőkhöz.',
+      cia:null,
+      hatalyKezdet:null, hatalyVeg:null,
+      letrehozva:'2026-06-05', modositotta:'Szabó Júlia',
+      naplo:[{mikor:'2026-06-05', ki:'Szabó Júlia', honnan:'—', hova:'Vázlat', megj:'létrehozás'}]
+    }]
+  },
+  {
+    kulcs:'3R-Core-TUS-003', tipus:'TUS', reteg:'Core', cim:'Megerősítő e-mail küldése',
+    tagek:['e-mail'],
+    verziok:[{
+      v:1, statusz:'Véleményezés',
+      rovid:'A megerősítő e-mail összeállítása és kiküldése a Core rétegben.',
+      leiras:'A szolgáltatás a regisztrációs esemény hatására sablonból összeállítja és kiküldi a megerősítő e-mailt, az eredményt naplózza.',
+      elofeltetelek:'Az e-mail sablontár elérhető.',
+      kriteriumok:'A felhasználó az [IB-XYT-14-1213] megfelelés érdekében a kiküldött e-mailben nem kap vissza jelszót vagy tokent nyílt szövegként.',
+      cia:null,
+      hatalyKezdet:null, hatalyVeg:null,
+      letrehozva:'2026-05-20', modositotta:'Tóth Bence',
+      naplo:[
+        {mikor:'2026-05-20', ki:'Tóth Bence', honnan:'—', hova:'Vázlat', megj:'létrehozás'},
+        {mikor:'2026-06-08', ki:'Tóth Bence', honnan:'Vázlat', hova:'Véleményezés', megj:''}
+      ]
+    }]
+  },
+  {
+    kulcs:'3R-BD-001', tipus:'BD', reteg:null, cim:'Regisztrációs űrlap (dokumentum)',
+    tagek:['űrlap','GDPR'],
+    verziok:[{
+      v:1, statusz:'Hatályos',
+      rovid:'A regisztrációs űrlap mezőit és a GDPR-nyilatkozat szövegét rögzítő üzleti dokumentum.',
+      leiras:'Mezők: név (kötelező), e-mail cím (kötelező), szervezet (opcionális), étkezési igény (opcionális), GDPR-nyilatkozat (kötelező jelölő).',
+      elofeltetelek:'', kriteriumok:'', cia:{c:2,i:3,a:2},
+      hatalyKezdet:'2026-02-01', hatalyVeg:null,
+      letrehozva:'2026-01-08', modositotta:'Kiss Anna',
+      naplo:[
+        {mikor:'2026-01-08', ki:'Kiss Anna', honnan:'—', hova:'Vázlat', megj:'létrehozás'},
+        {mikor:'2026-01-14', ki:'Kiss Anna', honnan:'Vázlat', hova:'Véleményezés', megj:''},
+        {mikor:'2026-01-22', ki:'Nagy Péter', honnan:'Véleményezés', hova:'Jóváhagyott', megj:'hatály: 2026-02-01 – visszavonásig'},
+        {mikor:'2026-02-01', ki:'RENDSZER', honnan:'Jóváhagyott', hova:'Hatályos', megj:'kezdődátum elérve'}
+      ]
+    }]
+  }  ,
+  {
+    kulcs:'Terminus-TAPI-TUS-001', tipus:'TUS', reteg:'TAPI', cim:'Regisztrációs adatok fogadása',
+    tagek:['api','integráció'],
+    verziok:[{
+      v:1, statusz:'Hatályos',
+      rovid:'A 3R-ből érkező regisztrációs adatcsomag fogadása és validálása.',
+      leiras:'A végpont fogadja a 3R Core rétege által küldött regisztrációs adatcsomagot, sémavalidáció után átadja tárolásra, és visszaigazolást küld.',
+      elofeltetelek:'A Terminus-TDB-TD-001 szerinti adatséma rendelkezésre áll.',
+      kriteriumok:'Hibás csomag esetén 400-as válasz, mezőszintű hibarészletekkel. A feldolgozás idempotens.',
+      cia:null,
+      hatalyKezdet:'2026-03-15', hatalyVeg:null,
+      letrehozva:'2026-02-20', modositotta:'Varga Dóra',
+      naplo:[
+        {mikor:'2026-02-20', ki:'Varga Dóra', honnan:'—', hova:'Vázlat', megj:'létrehozás'},
+        {mikor:'2026-02-27', ki:'Varga Dóra', honnan:'Vázlat', hova:'Véleményezés', megj:''},
+        {mikor:'2026-03-06', ki:'Nagy Péter', honnan:'Véleményezés', hova:'Jóváhagyott', megj:'hatály: 2026-03-15 – visszavonásig'},
+        {mikor:'2026-03-15', ki:'RENDSZER', honnan:'Jóváhagyott', hova:'Hatályos', megj:'kezdődátum elérve'}
+      ]
+    }]
+  },
+  {
+    kulcs:'Terminus-TDB-TD-001', tipus:'TD', reteg:'TDB', cim:'Vendég adatcsomag séma',
+    tagek:['séma','adat'],
+    verziok:[{
+      v:1, statusz:'Véleményezés',
+      rovid:'A vendégadatok tárolási sémáját rögzítő technikai dokumentum (JSON).',
+      leiras:'A séma verziókövetett, visszafelé kompatibilis bővítés megengedett.\n\n| Mező | Típus | Kötelező | Megjegyzés |\n| --- | --- | --- | --- |\n| id | uuid | igen | belső azonosító |\n| nev | string | igen | a vendég teljes neve |\n| email | string | igen | regisztrációs azonosító része |\n| esemenyId | uuid | igen | a 3R esemény hivatkozása |\n| regIdopont | datetime | igen | UTC |\n| allapot | enum | igen | aktiv, torolt |\n\nPélda adatcsomag:\n\n```json\n{\n  \"id\": \"7f3c…\",\n  \"nev\": \"Minta Anna\",\n  \"email\": \"anna@example.hu\",\n  \"esemenyId\": \"a91b…\",\n  \"regIdopont\": \"2026-06-01T09:14:00Z\",\n  \"allapot\": \"aktiv\"\n}\n```',
+      elofeltetelek:'', kriteriumok:'', cia:{c:3,i:3,a:2},
+      hatalyKezdet:null, hatalyVeg:null,
+      letrehozva:'2026-05-28', modositotta:'Varga Dóra',
+      mellekletek:[
+        {id:'M3', fajta:'csv', nev:'mezokatalogus.csv',
+         adat:'mezo,tipus,max hossz,megjegyzes\nid,uuid,36,belso azonosito\nnev,string,120,teljes nev\nemail,string,254,RFC 5321\nesemenyId,uuid,36,3R hivatkozas\nregIdopont,datetime,,UTC\nallapot,enum,,aktiv vagy torolt',
+         feltolto:'Varga Dóra', mikor:'2026-05-30'}
+      ],
+      naplo:[
+        {mikor:'2026-05-28', ki:'Varga Dóra', honnan:'—', hova:'Vázlat', megj:'létrehozás'},
+        {mikor:'2026-06-09', ki:'Varga Dóra', honnan:'Vázlat', hova:'Véleményezés', megj:''}
+      ]
+    }]
+  }
+];
+
+const KAPCS_FAJTAK = ['lebontja','hivatkozik','függ tőle','megfelel','leváltja'];
+// szimmetrikus/irányított ellentmondások tiltásához
+const KAPCS_ELLENTMOND = {'leváltja':'leváltja'};
+let KAPCSOLATOK = [
+  {forras:'3R-BUS-002', cel:'3R-TUC-001',      fajta:'lebontja'},
+  {forras:'3R-BUS-002', cel:'3R-FE-TUS-002',   fajta:'lebontja'},
+  {forras:'3R-TUC-001', cel:'3R-Core-TUS-003', fajta:'lebontja'},
+  {forras:'3R-F-001',   cel:'3R-Core-TUS-003', fajta:'lebontja'},
+  {forras:'3R-BUS-002', cel:'3R-BD-001',       fajta:'hivatkozik'},
+  {forras:'3R-FE-TUS-002', cel:'3R-Core-TUS-003', fajta:'függ tőle'},
+  {forras:'3R-Core-TUS-003', cel:'IB-XYT-14-1213', fajta:'megfelel'},
+  {forras:'3R-BUS-002', cel:'3R-BUS-001',      fajta:'leváltja'},
+  {forras:'3R-Core-TUS-003', cel:'Terminus-TAPI-TUS-001', fajta:'függ tőle'},
+  {forras:'Terminus-TAPI-TUS-001', cel:'Terminus-TDB-TD-001', fajta:'hivatkozik'}
+];
+
+/* ============ ÁLLAPOT ============ */
+let kivalasztottKulcs = null; // null = nincs kiválasztott elem
+let kartotekNezet = null;     // null | {tipus:'szolg'|'alk', kod} — szolgáltatás/alkalmazás kartoték
+let kivalasztottSzolg = 'FAIR'; // aktív szolgáltatás az áttekintésben
+let kivalasztottVerzio = null; // null = alapértelmezett verzió
+let tipusSzuro = new Set();
+let szovegSzuro = '';
+let statuszSzuroErtek = '';
+let alkSzuro = '';
+let grafNezet = false;
+let grafFajtak = null;   // null = mind; Set = szűrt
+let grafHatokor = 'mind'; // 'mind' | 'kornyezet'
+let vbGraf = null;        // pan/zoom nézetdoboz
+let szerkeszt = null;     // {kulcs, v} ha nyitva a szerkesztő
+let cimkeSzerk = false;   // true = a Tagek blokk chip-szerkesztő módban
+let szerkMod = 'vizualis';// 'vizualis' (TipTap) | 'forras' (markdown textarea)
+let wysiwygPeldany = null;// aktív TipTap Editor példány (teardownhoz)
+
+/* ============ SEGÉDEK ============ */
+const $ = s => document.querySelector(s);
+const esc = t => String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const simDatum = () => $('#simDatum').value;
+const szerepkor = () => $('#szerepkor').value;
+const datumHu = d => d ? d.replaceAll('-', '. ') + '.' : '';
+const elemByKulcs = k => ELEMEK.find(e => e.kulcs === k);
+const alkOf = e => { const a = e.kulcs.split('-')[0]; return alkById(a) ? a : (e.kulcs.startsWith('Terminus') ? 'Terminus' : '3R'); };
+const szolgOfAlk = kod => { const a = alkById(kod); return a ? a.szolg : null; };
+const alkStat = kod => {
+  const s = {};
+  ELEMEK.filter(e => alkOf(e) === kod).forEach(e => {
+    const st = elsodlegesVerzio(e).statusz; s[st] = (s[st]||0)+1;
+  });
+  return s;
+};
+
+function megjelenitendoVerzio(elem){
+  if(kivalasztottKulcs === elem.kulcs && kivalasztottVerzio){
+    const v = elem.verziok.find(x => x.v === kivalasztottVerzio);
+    if(v) return v;
+  }
+  return elem.verziok.find(x => x.statusz === 'Hatályos') || elem.verziok[elem.verziok.length-1];
+}
+function elsodlegesVerzio(elem){
+  return elem.verziok.find(x => x.statusz === 'Hatályos') || elem.verziok[elem.verziok.length-1];
+}
+
+function csvTabla(adat){
+  const sorok = adat.trim().split(/\r?\n/).filter(Boolean);
+  if(!sorok.length) return '';
+  const sep = (sorok[0].includes(';') && !sorok[0].includes(',')) ? ';' : ',';
+  const cella = s => s.split(sep).map(c => esc(c.trim()));
+  const fej = cella(sorok[0]);
+  return '<table class="md-tabla"><thead><tr>' + fej.map(c=>'<th>'+c+'</th>').join('') +
+    '</tr></thead><tbody>' + sorok.slice(1).map(s=>'<tr>'+cella(s).map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('') +
+    '</tbody></table>';
+}
+
+function mellekletHtml(m, alt){
+  if(m.fajta === 'kep')
+    return `<figure class="mell-kep" data-mid="${m.id}"><img src="${m.adat}" alt="${esc(alt||m.nev)}">
+      <figcaption>${esc(m.nev)}</figcaption></figure>`;
+  if(m.fajta === 'figma')
+    return `<div class="mell-figma" data-mid="${m.id}">
+      <div class="mell-figma-fej"><span class="figma-jel">F</span>
+        <div><b>${esc(m.nev)}</b><div class="mell-meta">Figma frame · a pillanatkép a verzióhoz fagyasztva</div></div>
+        <a class="mell-link" href="${esc(m.forrasUrl)}" target="_blank" rel="noopener">Megnyitás Figmában →</a></div>
+      ${m.kep ? `<img src="${m.kep}" alt="${esc(m.nev)} pillanatkép">`
+        : '<div class="mell-figma-hely">Pillanatkép helye — élesben a Figma API tölti a jóváhagyáskor rögzített állapottal.</div>'}
+    </div>`;
+  if(m.fajta === 'csv')
+    return `<div class="mell-csv" data-mid="${m.id}"><div class="mell-meta" style="margin-bottom:5px">${esc(m.nev)}</div>${csvTabla(m.adat)}</div>`;
+  if(m.fajta === 'video')
+    return `<div class="mell-video-blokk" data-mid="${m.id}"><div class="mell-video">
+      <video controls preload="metadata" src="${m.adat||esc(m.forrasUrl||'')}"></video></div>
+      <div class="mell-video-cim">${esc(m.nev)}</div></div>`;
+  return `<span class="mell-meta">${esc(m.nev)}</span>`;
+}
+
+function miniMd(szoveg, mellek){
+  if(!szoveg) return '<span class="ures">— nincs kitöltve —</span>';
+  /* 1. kerített blokkok és melléklet-hivatkozások kiemelése helyőrzőkkel */
+  const blokkok = [];
+  let forras = szoveg.replace(/```(\w*)\n([\s\S]*?)```/g, (_, nyelv, kod) => {
+    blokkok.push({nyelv: nyelv || 'kod', kod});
+    return '\u0000BLOKK' + (blokkok.length-1) + '\u0000';
+  });
+  forras = forras.replace(/!\[([^\]]*)\]\(melleklet:([\w-]+)\)/g, (_, alt, id) => {
+    blokkok.push({nyelv:'mell', alt, id});
+    return '\u0000BLOKK' + (blokkok.length-1) + '\u0000';
+  });
+  const bek = esc(forras).split(/\n\s*\n/);
+  let kimenet = bek.map(b => {
+    const sorok = b.split('\n').map(s => s.trim()).filter(Boolean);
+    if(!sorok.length) return '';
+    /* GFM táblázat: minden sor | jellel kezdődik */
+    if(sorok.length >= 2 && sorok.every(s => s.startsWith('|'))){
+      const cellak = s => s.replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+      const fej = cellak(sorok[0]);
+      const torzs = sorok.slice(/^\|[\s:\-|]+\|$/.test(sorok[1]) ? 2 : 1).map(cellak);
+      return '<table class="md-tabla"><thead><tr>' + fej.map(c=>'<th>'+c+'</th>').join('') +
+        '</tr></thead><tbody>' + torzs.map(s=>'<tr>'+s.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('') +
+        '</tbody></table>';
+    }
+    if(sorok.every(s => /^\d+\./.test(s)))
+      return '<ol>' + sorok.map(s => '<li>' + s.replace(/^\d+\.\s*/, '') + '</li>').join('') + '</ol>';
+    if(sorok.every(s => /^[•\-]/.test(s)))
+      return '<ul>' + sorok.map(s => '<li>' + s.replace(/^[•\-]\s*/, '') + '</li>').join('') + '</ul>';
+    return '<p>' + sorok.join('<br>') + '</p>';
+  }).join('');
+  /* 2. helyőrzők visszacserélése renderelt blokkokra */
+  kimenet = kimenet.replace(/\u0000BLOKK(\d+)\u0000/g, (_, i) => {
+    const b = blokkok[+i];
+    if(b.nyelv === 'mell'){
+      const m = (mellek||[]).find(x => x.id === b.id);
+      return m ? mellekletHtml(m, b.alt) : '<span class="ures">[hiányzó melléklet: '+esc(b.id)+']</span>';
+    }
+    if(b.nyelv === 'mermaid')
+      return '<div class="md-mermaid"><pre class="mermaid">' + esc(b.kod) + '</pre>' +
+             '<div class="md-mermaid-fallback">Mermaid diagram — a rendereléshez internetkapcsolat szükséges (CDN).</div></div>';
+    return '<pre class="md-kod" data-nyelv="' + esc(b.nyelv) + '"><code>' + esc(b.kod) + '</code></pre>';
+  });
+  return kimenet;
+}
+
+function toast(uzenet){
+  const t = $('#toast');
+  t.textContent = uzenet;
+  t.classList.add('lathato');
+  clearTimeout(t._idozito);
+  t._idozito = setTimeout(() => t.classList.remove('lathato'), 3400);
+}
+
+function naploz(ver, honnan, hova, ki, megj){
+  ver.naplo.push({mikor:simDatum(), ki, honnan, hova, megj: megj || ''});
+  ver.statusz = hova;
+}
+
+/* ---- Címke közös készlet ---- */
+function osszesCimke(){
+  const k = new Set();
+  ELEMEK.forEach(e => (e.tagek||[]).forEach(t => k.add(t)));
+  return [...k].sort((a,b)=>a.localeCompare(b,'hu'));
+}
+
+/* ---- Kapcsolat-célok (elemek + szabályzatok) ---- */
+function kapcsCelLista(sajatKulcs){
+  const elemek = ELEMEK.filter(e => e.kulcs !== sajatKulcs)
+    .map(e => ({kulcs:e.kulcs, nev:e.cim, csoport:'Elemek'}));
+  const szab = Object.entries(SZABALYZATOK)
+    .map(([k,v]) => ({kulcs:k, nev:v.nev, csoport:'Szabályzatok'}));
+  return [...elemek, ...szab];
+}
+function kapcsCelNev(kulcs){
+  const e = elemByKulcs(kulcs); if(e) return e.cim;
+  const sz = SZABALYZATOK[kulcs]; if(sz) return sz.nev;
+  return '';
+}
+
+/* ---- Kapcsolat-validáció. Visszatér: null = OK, vagy hibaszöveg ---- */
+function kapcsValidal(forras, cel, fajta){
+  if(!cel) return 'Válassz célt.';
+  if(!fajta) return 'Válassz kapcsolat-fajtát.';
+  if(forras === cel) return 'Az elem nem kapcsolódhat önmagához.';
+  if(!elemByKulcs(cel) && !SZABALYZATOK[cel]) return 'A megadott cél nem létezik.';
+  if(KAPCSOLATOK.some(k => k.forras===forras && k.cel===cel && k.fajta===fajta))
+    return 'Ez a kapcsolat már létezik.';
+  // irányított ellentmondás: pl. ha B már leváltja A-t, A ne válthassa le B-t
+  const ford = KAPCS_ELLENTMOND[fajta];
+  if(ford && KAPCSOLATOK.some(k => k.forras===cel && k.cel===forras && k.fajta===ford))
+    return `Ellentmondás: a(z) ${cel} már „${ford}" kapcsolatban áll ezzel az elemmel.`;
+  return null;
+}
+
+/* ============ ÁLLAPOTGÉP ============ */
+/* Átmenetek: {label, cel, szerep, modal} — a végleges állapotgép szerint */
+function lehetsegesMuveletek(elem, ver){
+  const m = [];
+  const ujabbAktiv = elem.verziok.some(x => x.v > ver.v && !['Elvetve','Archivált'].includes(x.statusz));
+  if(ver.statusz === 'Vázlat'){
+    m.push({label:'Beküldés véleményezésre', szerep:'Szerző', akcio:'bekuldes'});
+    m.push({label:'Elvetés', szerep:'Szerző', akcio:'elvetes', veszelyes:true});
+  }
+  if(ver.statusz === 'Véleményezés'){
+    m.push({label:'Jóváhagyás…', szerep:'Jóváhagyó', akcio:'jovahagyas'});
+    m.push({label:'Visszadobás…', szerep:'Jóváhagyó', akcio:'visszadobas', veszelyes:true});
+  }
+  if((ver.statusz === 'Jóváhagyott' || ver.statusz === 'Hatályos') && !ujabbAktiv){
+    m.push({label:'Új verzió nyitása (v' + (Math.max(...elem.verziok.map(x=>x.v))+1) + ')', szerep:'Szerző', akcio:'ujverzio', masodlagos:true});
+  }
+  if(ver.statusz === 'Hatályos'){
+    m.push({label:'Kivezetés…', szerep:'Admin', akcio:'kivezetes', veszelyes:true});
+  }
+  if(ver.statusz === 'Elavult'){
+    m.push({label:'Archiválás', szerep:'Admin', akcio:'archivalas', masodlagos:true});
+  }
+  return m;
+}
+
+function autoHint(ver){
+  if(ver.statusz === 'Jóváhagyott' && ver.hatalyKezdet)
+    return 'Hatályba lép: ' + datumHu(ver.hatalyKezdet) + ' (ütemező lépteti)';
+  if(ver.statusz === 'Hatályos' && ver.hatalyVeg)
+    return 'Hatályát veszti: ' + datumHu(ver.hatalyVeg) + ' (ütemező lépteti)';
+  return null;
+}
+
+/* ============ ÜTEMEZŐ ============ */
+function utemezoFut(){
+  const ma = simDatum();
+  let valtozas = 0;
+  ELEMEK.forEach(elem => {
+    /* 1) Jóváhagyott → Hatályos, ha a kezdődátum elérve */
+    elem.verziok.forEach(ver => {
+      if(ver.statusz === 'Jóváhagyott' && ver.hatalyKezdet && ver.hatalyKezdet <= ma){
+        /* a korábbi hatályos verzió leváltása: végdátum = új kezdete */
+        elem.verziok.forEach(regi => {
+          if(regi !== ver && regi.statusz === 'Hatályos'){
+            regi.hatalyVeg = ver.hatalyKezdet;
+            naploz(regi, 'Hatályos', 'Elavult', 'RENDSZER', 'leváltotta: v' + ver.v);
+            valtozas++;
+          }
+        });
+        naploz(ver, 'Jóváhagyott', 'Hatályos', 'RENDSZER', 'kezdődátum elérve');
+        valtozas++;
+      }
+    });
+    /* 2) Hatályos → Elavult, ha a végdátum lejárt */
+    elem.verziok.forEach(ver => {
+      if(ver.statusz === 'Hatályos' && ver.hatalyVeg && ver.hatalyVeg < ma){
+        naploz(ver, 'Hatályos', 'Elavult', 'RENDSZER', 'végdátum elérve');
+        valtozas++;
+      }
+    });
+  });
+  toast(valtozas ? 'Ütemező lefutott: ' + valtozas + ' automatikus átmenet (' + datumHu(ma) + ')'
+                 : 'Ütemező lefutott: nincs esedékes átmenet (' + datumHu(ma) + ')');
+  render();
+}
+
+/* ============ MŰVELETEK ============ */
+function muvelet(akcio){
+  const elem = elemByKulcs(kivalasztottKulcs);
+  const ver = megjelenitendoVerzio(elem);
+  if(akcio === 'bekuldes'){
+    naploz(ver, 'Vázlat', 'Véleményezés', szerepkor());
+    toast(elem.kulcs + ' v' + ver.v + ' beküldve véleményezésre'); render();
+  }
+  if(akcio === 'elvetes'){
+    modalNyit('Elvetés', `
+      <p style="font-size:13px">Az elem <b>Elvetve</b> végállapotba kerül. Fizikai törlés nincs — az auditnyom megmarad.</p>
+      <label>Indoklás (opcionális)</label><textarea id="mIndok"></textarea>`,
+      () => { naploz(ver, 'Vázlat', 'Elvetve', szerepkor(), $('#mIndok').value); toast(elem.kulcs + ' v' + ver.v + ' elvetve'); });
+  }
+  if(akcio === 'visszadobas'){
+    modalNyit('Visszadobás javításra', `
+      <label>Indoklás (kötelező)</label><textarea id="mIndok"></textarea>
+      <div class="hiba" id="mHiba">Az indoklás megadása kötelező.</div>`,
+      () => {
+        const i = $('#mIndok').value.trim();
+        if(!i){ $('#mHiba').style.display='block'; return false; }
+        naploz(ver, 'Véleményezés', 'Vázlat', szerepkor(), i);
+        toast(elem.kulcs + ' v' + ver.v + ' visszadobva Vázlatba');
+      });
+  }
+  if(akcio === 'jovahagyas'){
+    modalNyit('Jóváhagyás és hatályosság', `
+      <label>Hatályosság kezdete (kötelező)</label>
+      <input type="date" id="mKezdet" value="${simDatum()}">
+      <div class="jelolo"><input type="checkbox" id="mVisszavonasig" checked><span>Visszavonásig hatályos (nincs végdátum)</span></div>
+      <label>Hatályosság vége</label>
+      <input type="date" id="mVeg" disabled>
+      <div class="hiba" id="mHiba"></div>`,
+      () => {
+        const k = $('#mKezdet').value;
+        const visszavonasig = $('#mVisszavonasig').checked;
+        const v = visszavonasig ? null : $('#mVeg').value;
+        const hiba = $('#mHiba');
+        if(!k){ hiba.textContent='A kezdődátum kötelező.'; hiba.style.display='block'; return false; }
+        if(!visszavonasig && !v){ hiba.textContent='Adj meg végdátumot, vagy jelöld a „visszavonásig” opciót.'; hiba.style.display='block'; return false; }
+        if(v && v <= k){ hiba.textContent='A végdátumnak a kezdődátum után kell lennie.'; hiba.style.display='block'; return false; }
+        ver.hatalyKezdet = k; ver.hatalyVeg = v;
+        naploz(ver, 'Véleményezés', 'Jóváhagyott', szerepkor(), 'hatály: ' + k + ' – ' + (v || 'visszavonásig'));
+        toast(elem.kulcs + ' v' + ver.v + ' jóváhagyva — a hatályba lépést az ütemező végzi');
+      },
+      () => {
+        $('#mVisszavonasig').addEventListener('change', e => { $('#mVeg').disabled = e.target.checked; if(e.target.checked) $('#mVeg').value=''; });
+      });
+  }
+  if(akcio === 'ujverzio'){
+    const ujV = Math.max(...elem.verziok.map(x=>x.v)) + 1;
+    elem.verziok.push({
+      v:ujV, statusz:'Vázlat',
+      rovid:ver.rovid, leiras:ver.leiras, elofeltetelek:ver.elofeltetelek,
+      kriteriumok:ver.kriteriumok, cia:ver.cia ? {...ver.cia} : null,
+      hatalyKezdet:null, hatalyVeg:null,
+      letrehozva:simDatum(), modositotta:szerepkor(),
+      naplo:[{mikor:simDatum(), ki:szerepkor(), honnan:'—', hova:'Vázlat', megj:'új verzió nyitása (v'+ver.v+' alapján)'}]
+    });
+    kivalasztottVerzio = ujV;
+    toast(elem.kulcs + ' v' + ujV + ' létrejött Vázlat státuszban — a v' + ver.v + ' változatlanul ' + ver.statusz.toLowerCase());
+    render();
+  }
+  if(akcio === 'kivezetes'){
+    modalNyit('Kivezetés', `
+      <p style="font-size:13px">A verzió <b>Elavult</b> státuszba kerül. A végdátum rögzítésre kerül a hatályosságban.</p>
+      <label>Hatályosság vége</label><input type="date" id="mVeg" value="${simDatum()}">
+      <div class="hiba" id="mHiba"></div>`,
+      () => {
+        const v = $('#mVeg').value;
+        if(!v){ $('#mHiba').textContent='A végdátum kötelező.'; $('#mHiba').style.display='block'; return false; }
+        if(ver.hatalyKezdet && v <= ver.hatalyKezdet){ $('#mHiba').textContent='A végdátumnak a kezdődátum után kell lennie.'; $('#mHiba').style.display='block'; return false; }
+        ver.hatalyVeg = v;
+        naploz(ver, 'Hatályos', 'Elavult', szerepkor(), 'kézi kivezetés');
+        toast(elem.kulcs + ' v' + ver.v + ' kivezetve');
+      });
+  }
+  if(akcio === 'archivalas'){
+    naploz(ver, 'Elavult', 'Archivált', szerepkor());
+    toast(elem.kulcs + ' v' + ver.v + ' archiválva — végállapot'); render();
+  }
+}
+
+/* ============ ÚJ ELEM ============ */
+function ujElemModal(){
+  const tipusOpciok = Object.entries(TIPUSOK).map(([k,t]) => `<option value="${k}">${k} — ${t.nev}</option>`).join('');
+  const alkOpciok = ALKALMAZASOK.map(a => `<option value="${a.kod}" ${a.kod===(alkSzuro||'3R')?'selected':''}>${a.kod} — ${esc(a.nev)}</option>`).join('');
+  modalNyit('Új elem felvétele', `
+    <label>Alkalmazás</label><select id="mAlk">${alkOpciok}</select>
+    <label>Típus</label><select id="mTipus">${tipusOpciok}</select>
+    <label>Réteg <span style="font-weight:400">(csak technikai típusnál)</span></label>
+    <select id="mReteg"></select>
+    <label>Elnevezés</label><input type="text" id="mCim" placeholder="pl. Regisztráció törlése">
+    <label>Rövid leírás</label><textarea id="mRovid"></textarea>
+    <div class="hiba" id="mHiba"></div>
+    <p style="font-size:11.5px;color:var(--t-leges);margin-top:10px">Az azonosító sorszámát a rendszer az első mentéskor adja (DB-generált).</p>`,
+    () => {
+      const alk = $('#mAlk').value, tipus = $('#mTipus').value, reteg = $('#mReteg').value || null;
+      const cim = $('#mCim').value.trim();
+      const hiba = $('#mHiba');
+      if(!cim){ hiba.textContent='Az elnevezés kötelező.'; hiba.style.display='block'; return false; }
+      if(TIPUSOK[tipus].uzleti && reteg){ hiba.textContent='Üzleti elemhez nem kapcsolódik szoftverréteg.'; hiba.style.display='block'; return false; }
+      if(tipus==='TUS' && !reteg){ hiba.textContent='Technikai user storyhoz kötelező a réteg.'; hiba.style.display='block'; return false; }
+      const sorszamok = ELEMEK.filter(e => alkOf(e)===alk && e.tipus===tipus).map(e => parseInt(e.kulcs.match(/(\d+)$/)[1],10));
+      const kov = (sorszamok.length ? Math.max(...sorszamok) : 0) + 1;
+      const kulcs = alk + '-' + (reteg ? reteg + '-' : '') + tipus + '-' + String(kov).padStart(3,'0');
+      ELEMEK.push({
+        kulcs, tipus, reteg, cim, tagek:[],
+        verziok:[{v:1, statusz:'Vázlat', rovid:$('#mRovid').value, leiras:'', elofeltetelek:'', kriteriumok:'',
+          cia:(tipus==='BD'||tipus==='TD')?{c:1,i:1,a:1}:null, hatalyKezdet:null, hatalyVeg:null,
+          letrehozva:simDatum(), modositotta:szerepkor(),
+          naplo:[{mikor:simDatum(), ki:szerepkor(), honnan:'—', hova:'Vázlat', megj:'létrehozás'}]}]
+      });
+      kivalasztottKulcs = kulcs; kivalasztottVerzio = null;
+      toast('Létrejött: ' + kulcs + ' (v1, Vázlat) — a sorszámot a mentés generálta');
+    },
+    () => {
+      const frissit = () => {
+        const alk = ALKALMAZASOK.find(a => a.kod === $('#mAlk').value);
+        const uzleti = TIPUSOK[$('#mTipus').value].uzleti;
+        $('#mReteg').innerHTML = '<option value="">—</option>' + alk.retegek.map(r=>'<option>'+r+'</option>').join('');
+        $('#mReteg').disabled = uzleti;
+        if(uzleti) $('#mReteg').value = '';
+      };
+      $('#mAlk').addEventListener('change', frissit);
+      $('#mTipus').addEventListener('change', frissit);
+      frissit();
+    });
+}
+
+/* ============ MODAL ============ */
+function modalNyit(cim, html, mentes, utana){
+  const gy = $('#modalGyoker');
+  gy.innerHTML = `<div class="modal-hatter"><div class="modal" role="dialog" aria-label="${esc(cim)}">
+    <h3>${esc(cim)}</h3>${html}
+    <div class="modal-gombok">
+      <button class="btn masodlagos" id="mMegse">Mégse</button>
+      <button class="btn" id="mMentes">Mentés</button>
+    </div></div></div>`;
+  $('#mMegse').onclick = () => gy.innerHTML = '';
+  gy.querySelector('.modal-hatter').addEventListener('click', e => { if(e.target.classList.contains('modal-hatter')) gy.innerHTML=''; });
+  $('#mMentes').onclick = () => { if(mentes() === false) return; gy.innerHTML=''; render(); };
+  if(utana) utana();
+}
+
+
+/* ============ RENDER ============ */
+const PIPA = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+const FOLYAM = ['Vázlat','Véleményezés','Jóváhagyott','Hatályos','Elavult','Archivált'];
+const ST_SZIN = {'Vázlat':['#5C6677','#EEF1F5'],'Véleményezés':['#A65200','#FFF3E3'],
+  'Jóváhagyott':['#065E90','#E9F4FC'],'Hatályos':['#066E2B','#E7F8EE'],
+  'Elavult':['#5A6372','#E3E6EC'],'Archivált':['#373D49','#E3E6EC']};
+const TABOK = [
+  {kulcs:'', nev:'Mind', statuszok:null},
+  {kulcs:'hatalyos', nev:'Hatályos', statuszok:['Hatályos']},
+  {kulcs:'folyamatban', nev:'Folyamatban', statuszok:['Vázlat','Véleményezés','Jóváhagyott']},
+  {kulcs:'lezart', nev:'Lezárt', statuszok:['Elavult','Archivált','Elvetve']}
+];
+
+function tabTalalat(elem, tab){
+  if(!tab.statuszok) return true;
+  return elem.verziok.some(v => tab.statuszok.includes(v.statusz));
+}
+
+function renderTabok(){
+  $('#statuszTabok').innerHTML = TABOK.map(t => {
+    const db = ELEMEK.filter(e => tabTalalat(e, t)).length;
+    return `<button class="${statuszSzuroErtek===t.kulcs?'aktiv':''}" data-tab="${t.kulcs}">${t.nev}<span class="db">${db}</span></button>`;
+  }).join('');
+  document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { statuszSzuroErtek = b.dataset.tab; render(); });
+}
+
+function renderTipusSzurok(){
+  $('#tipusSzurok').innerHTML = Object.keys(TIPUSOK).map(k =>
+    `<button class="chip ${tipusSzuro.has(k)?'aktiv':''}" data-tipus="${k}" title="${TIPUSOK[k].nev}">${k}</button>`
+  ).join('');
+  document.querySelectorAll('[data-tipus]').forEach(b => b.onclick = () => {
+    tipusSzuro.has(b.dataset.tipus) ? tipusSzuro.delete(b.dataset.tipus) : tipusSzuro.add(b.dataset.tipus);
+    render();
+  });
+}
+
+function renderLista(){
+  const q = szovegSzuro.toLowerCase();
+  const tab = TABOK.find(t => t.kulcs === statuszSzuroErtek) || TABOK[0];
+  const talalatok = ELEMEK.filter(e => {
+    if(alkSzuro && alkOf(e) !== alkSzuro) return false;
+    if(tipusSzuro.size && !tipusSzuro.has(e.tipus)) return false;
+    if(!tabTalalat(e, tab)) return false;
+    if(q && !(e.kulcs.toLowerCase().includes(q) || e.cim.toLowerCase().includes(q) || e.tagek.join(' ').toLowerCase().includes(q))) return false;
+    return true;
+  });
+  $('#lista').innerHTML = talalatok.length ? talalatok.map(e => {
+    const ver = elsodlegesVerzio(e);
+    const masodlagos = e.verziok.filter(v => v !== ver && !['Elvetve','Archivált'].includes(v.statusz));
+    return `<button class="lista-elem ${e.kulcs===kivalasztottKulcs?'kivalasztott':''}" data-kulcs="${e.kulcs}">
+      <div class="le-sor1">
+        <span class="lista-kulcs">${e.kulcs}</span><span class="tolto"></span>
+        <span class="badge mini b-${ver.statusz}">${ver.statusz}</span>
+      </div>
+      <div class="lista-cim">${esc(e.cim)}</div>
+      <div class="lista-meta">
+        <span>${TIPUSOK[e.tipus].nev}${e.reteg ? ' · '+e.reteg : ''}</span>
+        ${masodlagos.map(v => `<span class="badge mini b-${v.statusz}">v${v.v} ${v.statusz}</span>`).join('')}
+      </div>
+    </button>`;
+  }).join('') : `<div class="lista-ures">Nincs a szűrésnek megfelelő elem.<br>Módosítsd a keresést vagy a szűrőket.</div>`;
+  document.querySelectorAll('[data-kulcs]').forEach(b => b.onclick = () => {
+    kivalasztottKulcs = b.dataset.kulcs; kivalasztottVerzio = null; szerkeszt = null; render();
+  });
+}
+
+function stepperHtml(ver){
+  if(ver.statusz === 'Elvetve')
+    return `<div class="stepper-elvetve"><span class="badge nagy b-Elvetve">Elvetve</span>
+      <span style="color:var(--t-halk);font-weight:500">Végállapot — az auditnyom megmaradt, az elem nem szerkeszthető.</span></div>`;
+  const akt = FOLYAM.indexOf(ver.statusz);
+  let html = '<div class="stepper">';
+  FOLYAM.forEach((st, i) => {
+    if(i > 0){
+      const auto = (FOLYAM[i]==='Hatályos' || FOLYAM[i]==='Elavult');
+      html += `<div class="osszekoto ${i<=akt?'kesz':''}">${auto?'<span class="auto-cimke">AUTO</span>':''}</div>`;
+    }
+    const allapot = i < akt ? 'kesz' : (i === akt ? 'aktualis' : '');
+    const [szin,tint] = ST_SZIN[st];
+    html += `<div class="lepes ${allapot}" ${allapot==='aktualis'?`style="--st-szin:${szin};--st-tint:${tint}"`:''}>
+      <span class="pont">${allapot==='kesz'?PIPA:''}</span>
+      <span class="felirat">${st}</span></div>`;
+  });
+  return html + '</div>';
+}
+
+function hatalyHtml(ver){
+  if(!ver.hatalyKezdet)
+    return '<div class="torzs"><span class="ures">Jóváhagyáskor kerül megadásra.</span></div>';
+  const nyitott = !ver.hatalyVeg;
+  return `<div class="hataly-sor">
+      <span>Kezdete<b>${datumHu(ver.hatalyKezdet)}</b></span>
+      <span style="text-align:right">Vége<b class="${nyitott?'visszavonasig':''}">${nyitott?'visszavonásig':datumHu(ver.hatalyVeg)}</b></span>
+    </div>
+    <div class="hataly-vonal"><div class="toltes ${nyitott?'nyitott':''}"></div></div>`;
+}
+
+/* ============ KAPCSOLATI GRÁF ============ */
+const EL_STILUS = {
+  'lebontja':  {szin:'#4258ED', dash:'',     v:2,   leiras:'lebontási hierarchia'},
+  'függ tőle': {szin:'#A65200', dash:'7 4',  v:2,   leiras:'megvalósítási függés'},
+  'hivatkozik':{szin:'#5C6677', dash:'2 5',  v:2,   leiras:'informális hivatkozás'},
+  'megfelel':  {szin:'#065E90', dash:'11 4', v:2,   leiras:'szabályzat-megfelelés'},
+  'leváltja':  {szin:'#D6220F', dash:'',     v:2.6, leiras:'kivezetés / utód'}
+};
+const GW = 178, GH = 52, GX = 212, GY = 152;
+
+function grafSzintAlap(t){ return {BUS:0, F:1, TUC:1, TUS:2, BD:3, TD:3}[t] ?? 2; }
+
+function renderGraf(){
+  const mindFajta = Object.keys(EL_STILUS);
+  const aktivFajtak = grafFajtak || new Set(mindFajta);
+
+  /* élek és csomópontok összegyűjtése */
+  let elek = KAPCSOLATOK.filter(k => aktivFajtak.has(k.fajta));
+  let kulcsok = new Set();
+  if(grafHatokor === 'kornyezet' && kivalasztottKulcs){
+    elek = elek.filter(k => k.forras === kivalasztottKulcs || k.cel === kivalasztottKulcs);
+    kulcsok.add(kivalasztottKulcs);
+  } else {
+    ELEMEK.forEach(e => kulcsok.add(e.kulcs));
+    Object.keys(SZABALYZATOK).forEach(k => kulcsok.add(k));
+  }
+  elek.forEach(k => { kulcsok.add(k.forras); kulcsok.add(k.cel); });
+
+  const csomok = {};
+  kulcsok.forEach(k => {
+    const e = elemByKulcs(k);
+    if(e) csomok[k] = {kulcs:k, cim:e.cim, statusz:elsodlegesVerzio(e).statusz,
+                       szint:grafSzintAlap(e.tipus), szab:false};
+    else if(SZABALYZATOK[k]) csomok[k] = {kulcs:k, cim:SZABALYZATOK[k].nev, statusz:null, szint:4, szab:true};
+  });
+  /* lebontási kényszer: a gyerek mindig mélyebbre kerül a szülőnél */
+  for(let i=0;i<4;i++) elek.forEach(k => {
+    if(k.fajta==='lebontja' && csomok[k.forras] && csomok[k.cel])
+      csomok[k.cel].szint = Math.max(csomok[k.cel].szint, csomok[k.forras].szint+1);
+  });
+
+  /* szintenkénti rendezés (2 barycenter-menet a keresztezések ellen) */
+  const szintek = {};
+  Object.values(csomok).forEach(cs => (szintek[cs.szint] = szintek[cs.szint]||[]).push(cs));
+  Object.values(szintek).forEach(s => s.sort((a,b)=>a.kulcs.localeCompare(b.kulcs)));
+  const xOf = cs => cs._x ?? 0;
+  for(let menet=0;menet<2;menet++){
+    Object.keys(szintek).sort((a,b)=>a-b).forEach(L => {
+      const sor = szintek[L];
+      sor.forEach((cs,i)=>cs._x=i);
+      sor.forEach(cs => {
+        const szomszed = elek.filter(k=>k.forras===cs.kulcs||k.cel===cs.kulcs)
+          .map(k => csomok[k.forras===cs.kulcs?k.cel:k.forras]).filter(Boolean);
+        cs._b = szomszed.length ? szomszed.reduce((s,n)=>s+xOf(n),0)/szomszed.length : cs._x;
+      });
+      sor.sort((a,b)=>a._b-b._b).forEach((cs,i)=>cs._x=i);
+    });
+  }
+  Object.values(szintek).forEach(sor => sor.forEach((cs,i) => {
+    cs.x = (i-(sor.length-1)/2)*GX - GW/2;
+    cs.y = cs.szint*GY;
+  }));
+
+  /* kiterjedés + nézetdoboz */
+  const xs = Object.values(csomok).map(c=>c.x), ys = Object.values(csomok).map(c=>c.y);
+  const ext = xs.length ? {x:Math.min(...xs)-60, y:Math.min(...ys)-50,
+    w:Math.max(...xs)-Math.min(...xs)+GW+120, h:Math.max(...ys)-Math.min(...ys)+GH+110}
+    : {x:-200,y:-50,w:400,h:200};
+  if(!vbGraf) vbGraf = {...ext};
+
+  /* élek rajzolása */
+  const utak = elek.map((k,i) => {
+    const s = csomok[k.forras], t = csomok[k.cel];
+    if(!s||!t) return '';
+    const st = EL_STILUS[k.fajta];
+    let d;
+    if(s.szint === t.szint){
+      const [b,j] = s.x < t.x ? [s,t] : [t,s];
+      d = `M ${b.x+GW} ${b.y+GH/2} C ${b.x+GW+58} ${b.y-52}, ${j.x-58} ${j.y-52}, ${j.x} ${j.y+GH/2}`;
+      if(s.x > t.x) d = `M ${s.x} ${s.y+GH/2} C ${s.x-58} ${s.y-52}, ${t.x+GW+58} ${t.y-52}, ${t.x+GW} ${t.y+GH/2}`;
+    } else {
+      const [f,a] = s.szint < t.szint ? [s,t] : [t,s];
+      const fx=f.x+GW/2, ax=a.x+GW/2, koz=(f.y+GH+a.y)/2;
+      d = s.szint < t.szint
+        ? `M ${fx} ${f.y+GH} C ${fx} ${koz}, ${ax} ${koz}, ${ax} ${a.y}`
+        : `M ${ax} ${a.y} C ${ax} ${koz}, ${fx} ${koz}, ${fx} ${f.y+GH}`;
+      if(s.szint > t.szint) d = `M ${s.x+GW/2} ${s.y} C ${s.x+GW/2} ${koz}, ${t.x+GW/2} ${koz}, ${t.x+GW/2} ${t.y+GH}`;
+    }
+    return `<path class="graf-el" data-f="${k.forras}" data-c="${k.cel}" d="${d}" fill="none"
+      stroke="${st.szin}" stroke-width="${st.v}" ${st.dash?`stroke-dasharray="${st.dash}"`:''}
+      marker-end="url(#ny-${mindFajta.indexOf(k.fajta)})"><title>${k.forras} —${k.fajta}→ ${k.cel}</title></path>`;
+  }).join('');
+
+  /* csomópontok */
+  const dobozok = Object.values(csomok).map(cs => {
+    const szin = cs.szab ? '#5C6677' : (ST_SZIN[cs.statusz]||['#D6220F'])[0];
+    const cim = cs.cim.length>24 ? cs.cim.slice(0,23)+'…' : cs.cim;
+    const kij = cs.kulcs===kivalasztottKulcs;
+    return `<g class="graf-cs ${kij?'kijelolt':''}" data-graf-kulcs="${cs.kulcs}" transform="translate(${cs.x},${cs.y})">
+      <rect width="${GW}" height="${GH}" rx="11" fill="#fff" ${cs.szab?'stroke-dasharray="5 4"':''}
+        stroke="${kij?'#4258ED':'#D3D9E3'}" stroke-width="${kij?2.4:1.4}"/>
+      ${cs.szab?'':`<rect x="0" y="10" width="4" height="${GH-20}" rx="2" fill="${szin}"/>`}
+      <text x="14" y="20" font-family="ui-monospace,Consolas,monospace" font-size="10" fill="#5C6677">${cs.kulcs}</text>
+      <text x="14" y="38" font-size="11.5" font-weight="600" fill="#16191F">${esc(cim)}</text>
+      ${cs.statusz?`<circle cx="${GW-13}" cy="14" r="4.5" fill="${szin}"><title>${cs.statusz}</title></circle>`:''}
+      <title>${cs.kulcs} — ${esc(cs.cim)}${cs.statusz?' ('+cs.statusz+')':''}</title>
+    </g>`;
+  }).join('');
+
+  const markerek = mindFajta.map((f,i) =>
+    `<marker id="ny-${i}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+       <path d="M0 0 L10 5 L0 10 z" fill="${EL_STILUS[f].szin}"/></marker>`).join('');
+
+  const fajtaChipek = mindFajta.map(f => `
+    <button class="chip graf-chip ${aktivFajtak.has(f)?'aktiv':''}" data-graf-fajta="${f}">
+      <span class="vonal-minta" style="--c:${EL_STILUS[f].szin};${EL_STILUS[f].dash?'--d:'+EL_STILUS[f].dash.replace(' ',','):''}"></span>${f}
+    </button>`).join('');
+
+  $('#fo').innerHTML = `<div class="graf-wrap">
+    <div class="graf-eszkoztar">
+      <span class="graf-cim">Kapcsolati gráf</span>
+      <div class="szegmens graf-szeg">
+        <button class="${grafHatokor==='mind'?'aktiv':''}" data-hatokor="mind">Teljes gráf</button>
+        <button class="${grafHatokor==='kornyezet'?'aktiv':''}" data-hatokor="kornyezet" ${kivalasztottKulcs?'':'disabled title="Előbb jelölj ki elemet a listában"'}>Kijelölt környezete</button>
+      </div>
+      <div class="szuro-sor" style="flex:1">${fajtaChipek}</div>
+      <button class="gomb halk" id="btnGrafIlleszt" title="A teljes gráf bekeretezése">Középre igazítás</button>
+    </div>
+    <svg id="grafSvg" viewBox="${vbGraf.x} ${vbGraf.y} ${vbGraf.w} ${vbGraf.h}" role="img"
+      aria-label="Kapcsolati gráf: ${Object.keys(csomok).length} elem, ${elek.length} kapcsolat">
+      <defs>${markerek}</defs>
+      ${utak}${dobozok}
+    </svg>
+    <div class="graf-jelmagyarazat">
+      <b>Jelmagyarázat</b>
+      ${mindFajta.map(f=>`<span><i class="vonal-minta" style="--c:${EL_STILUS[f].szin};${EL_STILUS[f].dash?'--d:'+EL_STILUS[f].dash.replace(' ',','):''}"></i>${f} — ${EL_STILUS[f].leiras}</span>`).join('')}
+      <span><i class="pont-minta"></i>bal sáv és pötty: az elem státuszának színe · szaggatott keret: külső szabályzat</span>
+      <span class="halk">Kattints egy elemre a kartotékjához · görgetés: nagyítás · húzás: mozgatás</span>
+    </div>
+  </div>`;
+
+  /* interakciók */
+  document.querySelectorAll('[data-hatokor]').forEach(b => b.onclick = () => { grafHatokor=b.dataset.hatokor; vbGraf=null; render(); });
+  document.querySelectorAll('[data-graf-fajta]').forEach(b => b.onclick = () => {
+    const s = grafFajtak || new Set(mindFajta);
+    s.has(b.dataset.grafFajta) ? s.delete(b.dataset.grafFajta) : s.add(b.dataset.grafFajta);
+    grafFajtak = s; render();
+  });
+  $('#btnGrafIlleszt').onclick = () => { vbGraf = null; render(); };
+  document.querySelectorAll('[data-graf-kulcs]').forEach(g => {
+    g.onclick = () => { kivalasztottKulcs = g.dataset.grafKulcs; kivalasztottVerzio = null;
+      if(elemByKulcs(kivalasztottKulcs)){ grafNezet = false; $('#btnGraf').setAttribute('aria-pressed','false'); $('#btnGraf').classList.remove('aktiv'); }
+      render(); };
+    g.onmouseenter = () => {
+      const k = g.dataset.grafKulcs;
+      document.querySelectorAll('.graf-el').forEach(p => p.classList.toggle('tompa', p.dataset.f!==k && p.dataset.c!==k));
+      const szomszed = new Set([k]);
+      document.querySelectorAll('.graf-el').forEach(p => { if(p.dataset.f===k) szomszed.add(p.dataset.c); if(p.dataset.c===k) szomszed.add(p.dataset.f); });
+      document.querySelectorAll('.graf-cs').forEach(n => n.classList.toggle('tompa', !szomszed.has(n.dataset.grafKulcs)));
+    };
+    g.onmouseleave = () => document.querySelectorAll('.tompa').forEach(x=>x.classList.remove('tompa'));
+  });
+
+  /* pan + zoom */
+  const svg = $('#grafSvg');
+  svg.addEventListener('wheel', ev => {
+    ev.preventDefault();
+    const k = ev.deltaY > 0 ? 1.12 : 1/1.12;
+    const r = svg.getBoundingClientRect();
+    const mx = vbGraf.x + (ev.clientX-r.left)/r.width*vbGraf.w;
+    const my = vbGraf.y + (ev.clientY-r.top)/r.height*vbGraf.h;
+    vbGraf = {x:mx-(mx-vbGraf.x)*k, y:my-(my-vbGraf.y)*k, w:vbGraf.w*k, h:vbGraf.h*k};
+    svg.setAttribute('viewBox', `${vbGraf.x} ${vbGraf.y} ${vbGraf.w} ${vbGraf.h}`);
+  }, {passive:false});
+  let huzas = null;
+  svg.addEventListener('pointerdown', ev => { if(ev.target.closest('.graf-cs')) return;
+    huzas = {x:ev.clientX, y:ev.clientY}; svg.setPointerCapture(ev.pointerId); });
+  svg.addEventListener('pointermove', ev => { if(!huzas) return;
+    const r = svg.getBoundingClientRect();
+    vbGraf.x -= (ev.clientX-huzas.x)/r.width*vbGraf.w;
+    vbGraf.y -= (ev.clientY-huzas.y)/r.height*vbGraf.h;
+    huzas = {x:ev.clientX, y:ev.clientY};
+    svg.setAttribute('viewBox', `${vbGraf.x} ${vbGraf.y} ${vbGraf.w} ${vbGraf.h}`); });
+  svg.addEventListener('pointerup', () => huzas = null);
+}
+
+function renderAlk(){
+  const kodok = ['', ...ALKALMAZASOK.map(a=>a.kod)];
+  $('#alkValaszto').innerHTML = kodok.map(k => {
+    const db = k ? ELEMEK.filter(e=>alkOf(e)===k).length : ELEMEK.length;
+    return `<button class="chip ${alkSzuro===k?'aktiv':''}" data-alk="${k}">${k||'Minden alkalmazás'} <span style="opacity:.65">${db}</span></button>`;
+  }).join('');
+  document.querySelectorAll('[data-alk]').forEach(b => b.onclick = () => { alkSzuro = b.dataset.alk; render(); });
+}
+
+function renderAttekintes(){
+  const szolg = szolgById(kivalasztottSzolg) || SZOLGALTATASOK[0];
+  if(szolg) kivalasztottSzolg = szolg.kod;
+  const sajatAlkok = ALKALMAZASOK.filter(a => a.szolg === kivalasztottSzolg);
+  const appKartyak = sajatAlkok.map(a => {
+    const stat = alkStat(a.kod);
+    const ossz = ELEMEK.filter(e=>alkOf(e)===a.kod).length;
+    return `<div class="app-kartya">
+      <div class="app-fej">
+        <div>
+          <div class="app-nev">${esc(a.nev)}</div>
+          <span class="kulcs-chip" style="margin:4px 0 0">${a.kod}</span>
+        </div>
+        <div class="app-fej-gombok">
+          <button class="ikon-gomb" data-alk-kartotek="${a.kod}" title="Alkalmazás kartoték">Kartoték</button>
+          <button class="gomb masodlagos" data-app-megnyit="${a.kod}">Elemek →</button>
+        </div>
+      </div>
+      <p class="app-leiras">${esc(a.leiras)}</p>
+      <div class="app-meta">
+        <span><b>Last release</b>${a.lastRelease||'—'}</span>
+        <span><b>Last version</b>${a.lastVersion||'—'}</span>
+        <span><b>Rétegek</b>${a.retegek.length?a.retegek.join(' · '):'—'}</span>
+        <span><b>Elemek</b>${ossz} db</span>
+      </div>
+      <div class="stat-sor">${Object.entries(stat).map(([st,db]) =>
+        `<span class="badge mini b-${st}">${st} · ${db}</span>`).join('') || '<span class="ures">Nincs elem.</span>'}</div>
+    </div>`;
+  }).join('') || '<div class="torzs" style="grid-column:1/-1"><span class="ures">Ehhez a szolgáltatáshoz még nincs alkalmazás. Vegyél fel egyet a „+ Új alkalmazás" gombbal.</span></div>';
+
+  const szolgValaszto = SZOLGALTATASOK.length > 1 ? `<div class="szolg-valaszto">${
+    SZOLGALTATASOK.map(s => `<button class="chip ${s.kod===kivalasztottSzolg?'aktiv':''}" data-szolg-valt="${s.kod}">${esc(s.kod)}</button>`).join('')
+  }<button class="chip chip-uj" data-uj-szolg>+ Új szolgáltatás</button></div>`
+   : `<div class="szolg-valaszto"><button class="chip chip-uj" data-uj-szolg>+ Új szolgáltatás</button></div>`;
+
+  $('#fo').innerHTML = `<div class="attekintes">
+    ${szolgValaszto}
+    <div class="szolg-fej">
+      <div class="szolg-cimke">Üzleti szolgáltatás</div>
+      <h2>${esc(szolg.nev)} <span class="kulcs-chip">${esc(szolg.kod)}</span></h2>
+      <p>${esc(szolg.leiras)}</p>
+      <div class="szolg-fej-gombok">
+        <button class="gomb masodlagos" data-szolg-kartotek="${szolg.kod}">Szolgáltatás kartoték →</button>
+      </div>
+    </div>
+    <div class="szolg-alcim-sor">
+      <div class="szolg-alcim">Alkalmazások · ${sajatAlkok.length}</div>
+      <button class="gomb elsodleges kicsi" data-uj-alk>+ Új alkalmazás</button>
+    </div>
+    <div class="app-racs">${appKartyak}</div>
+  </div>`;
+  document.querySelectorAll('[data-app-megnyit]').forEach(b => b.onclick = () => {
+    alkSzuro = b.dataset.appMegnyit;
+    const elso = ELEMEK.find(e => alkOf(e) === alkSzuro);
+    kivalasztottKulcs = elso ? elso.kulcs : null; kartotekNezet = null;
+    kivalasztottVerzio = null; render();
+  });
+  document.querySelectorAll('[data-szolg-valt]').forEach(b => b.onclick = () => { kivalasztottSzolg = b.dataset.szolgValt; render(); });
+  document.querySelectorAll('[data-szolg-kartotek]').forEach(b => b.onclick = () => { kartotekNezet = {tipus:'szolg', kod:b.dataset.szolgKartotek}; kivalasztottKulcs = null; render(); });
+  document.querySelectorAll('[data-alk-kartotek]').forEach(b => b.onclick = () => { kartotekNezet = {tipus:'alk', kod:b.dataset.alkKartotek}; kivalasztottKulcs = null; render(); });
+  const ujSzolg = $('[data-uj-szolg]'); if(ujSzolg) ujSzolg.onclick = ujSzolgModal;
+  const ujAlk = $('[data-uj-alk]'); if(ujAlk) ujAlk.onclick = () => ujAlkModal(kivalasztottSzolg);
+}
+
+/* ============ SZOLGÁLTATÁS-KARTOTÉK ============ */
+function naploHtml(naplo){
+  return `<div class="kart-naplo">${(naplo||[]).slice().reverse().map(n =>
+    `<div class="kart-naplo-sor"><span class="kn-datum">${datumHu(n.mikor)}</span>
+      <span class="kn-ki">${esc(n.ki)}</span><span class="kn-megj">${esc(n.megj)}</span></div>`).join('')}</div>`;
+}
+
+function renderSzolgKartya(kod){
+  const szolg = szolgById(kod);
+  if(!szolg){ kartotekNezet = null; renderAttekintes(); return; }
+  const alkok = ALKALMAZASOK.filter(a => a.szolg === kod);
+  const elemDb = ELEMEK.filter(e => szolgOfAlk(alkOf(e)) === kod).length;
+  const admin = szerepkor() === 'Admin';
+  $('#fo').innerHTML = `
+    <div class="reszlet-fej">
+      <div class="rf-felso">
+        <div class="rf-cimblokk">
+          <div class="morzsa-sor">
+            <button data-nav-att>Áttekintés</button><span>/</span>
+            <span class="kulcs-chip">${esc(szolg.kod)}</span>
+          </div>
+          <h2 class="reszlet-cim">${esc(szolg.nev)}</h2>
+          <div class="reszlet-altipus">Üzleti szolgáltatás · ${alkok.length} alkalmazás · ${elemDb} elem</div>
+        </div>
+        <div class="rf-akciok">
+          ${admin ? '<button class="gomb elsodleges" data-szolg-szerk>Szerkesztés</button>'
+            : '<span class="szerep-hint">Szerkesztéshez Admin szerepkör szükséges.</span>'}
+        </div>
+      </div>
+    </div>
+    <div class="ketoszlop">
+      <div class="bal-oszlop">
+        <div class="blokk"><div class="blokk-cim">Leírás</div>
+          <div class="torzs">${esc(szolg.leiras) || '<span class="ures">—</span>'}</div></div>
+        <div class="blokk"><div class="blokk-cim">Alkalmazások · ${alkok.length}</div>
+          ${alkok.length ? alkok.map(a => `
+            <div class="mell-sor mell-sor-kart" data-alk-nyit="${a.kod}">
+              <span class="mell-ikon mell-ikon-figma">${esc(a.kod.slice(0,1))}</span>
+              <div class="mell-sor-szoveg"><b>${esc(a.nev)}</b>
+                <div class="mell-meta">${esc(a.kod)} · ${a.retegek.join(' · ')||'nincs réteg'} · ${ELEMEK.filter(e=>alkOf(e)===a.kod).length} elem</div></div>
+              <span class="mell-link">→</span>
+            </div>`).join('') : '<div class="torzs"><span class="ures">Nincs alkalmazás.</span></div>'}
+        </div>
+      </div>
+      <div class="jobb-oszlop">
+        <div class="blokk"><div class="blokk-cim">Adatok</div>
+          <div class="kart-meta">
+            <span><b>Kód</b>${esc(szolg.kod)}</span>
+            <span><b>Felelős</b>${esc(szolg.felelos||'—')}</span>
+            <span><b>Létrehozva</b>${datumHu(szolg.letrehozva)}</span>
+            <span><b>Módosította</b>${esc(szolg.modositotta||'—')}</span>
+          </div>
+        </div>
+        <div class="blokk"><div class="blokk-cim">Napló</div>${naploHtml(szolg.naplo)}</div>
+      </div>
+    </div>`;
+  const nav = $('[data-nav-att]'); if(nav) nav.onclick = () => { kartotekNezet = null; render(); };
+  document.querySelectorAll('[data-alk-nyit]').forEach(b => b.onclick = () => { kartotekNezet = {tipus:'alk', kod:b.dataset.alkNyit}; render(); });
+  const sz = $('[data-szolg-szerk]'); if(sz) sz.onclick = () => szerkesztSzolgModal(kod);
+}
+
+/* ============ ALKALMAZÁS-KARTOTÉK ============ */
+function renderAlkKartya(kod){
+  const alk = alkById(kod);
+  if(!alk){ kartotekNezet = null; renderAttekintes(); return; }
+  const szolg = szolgById(alk.szolg);
+  const sajatElemek = ELEMEK.filter(e => alkOf(e) === kod);
+  const stat = alkStat(kod);
+  const admin = szerepkor() === 'Admin';
+  $('#fo').innerHTML = `
+    <div class="reszlet-fej">
+      <div class="rf-felso">
+        <div class="rf-cimblokk">
+          <div class="morzsa-sor">
+            <button data-nav-att>Áttekintés</button><span>/</span>
+            <button data-nav-szolg="${esc(alk.szolg)}">${esc(alk.szolg)}</button><span>/</span>
+            <span class="kulcs-chip">${esc(alk.kod)}</span>
+          </div>
+          <h2 class="reszlet-cim">${esc(alk.nev)}</h2>
+          <div class="reszlet-altipus">Alkalmazás · ${szolg?esc(szolg.nev):'—'} alatt · ${sajatElemek.length} elem</div>
+        </div>
+        <div class="rf-akciok">
+          ${admin ? '<button class="gomb elsodleges" data-alk-szerk>Szerkesztés</button>'
+            : '<span class="szerep-hint">Szerkesztéshez Admin szerepkör szükséges.</span>'}
+        </div>
+      </div>
+    </div>
+    <div class="ketoszlop">
+      <div class="bal-oszlop">
+        <div class="blokk"><div class="blokk-cim">Leírás</div>
+          <div class="torzs">${esc(alk.leiras) || '<span class="ures">—</span>'}</div></div>
+        <div class="blokk"><div class="blokk-cim">Elemek · ${sajatElemek.length}</div>
+          <div class="stat-sor" style="margin-bottom:10px">${Object.entries(stat).map(([st,db]) =>
+            `<span class="badge mini b-${st}">${st} · ${db}</span>`).join('') || '<span class="ures">Nincs elem.</span>'}</div>
+          ${sajatElemek.length ? sajatElemek.map(e => {
+            const v = elsodlegesVerzio(e);
+            return `<div class="mell-sor mell-sor-kart" data-elem-nyit="${e.kulcs}">
+              <span class="kulcs-chip" style="flex:none">${esc(e.kulcs)}</span>
+              <div class="mell-sor-szoveg"><b>${esc(e.cim)}</b>
+                <div class="mell-meta">${esc(v.statusz)}</div></div>
+              <span class="mell-link">→</span>
+            </div>`;
+          }).join('') : '<div class="torzs"><span class="ures">Nincs elem ebben az alkalmazásban.</span></div>'}
+        </div>
+      </div>
+      <div class="jobb-oszlop">
+        <div class="blokk"><div class="blokk-cim">Adatok</div>
+          <div class="kart-meta">
+            <span><b>Kód</b>${esc(alk.kod)}</span>
+            <span><b>Szolgáltatás</b>${esc(alk.szolg)}</span>
+            <span><b>Rétegek</b>${alk.retegek.join(' · ')||'—'}</span>
+            <span><b>Last release</b>${esc(alk.lastRelease||'—')}</span>
+            <span><b>Last version</b>${esc(alk.lastVersion||'—')}</span>
+            <span><b>Felelős</b>${esc(alk.felelos||'—')}</span>
+            <span><b>Létrehozva</b>${datumHu(alk.letrehozva)}</span>
+          </div>
+        </div>
+        <div class="blokk"><div class="blokk-cim">Napló</div>${naploHtml(alk.naplo)}</div>
+      </div>
+    </div>`;
+  const nav = $('[data-nav-att]'); if(nav) nav.onclick = () => { kartotekNezet = null; render(); };
+  const navSz = $('[data-nav-szolg]'); if(navSz) navSz.onclick = () => { kartotekNezet = {tipus:'szolg', kod:navSz.dataset.navSzolg}; render(); };
+  document.querySelectorAll('[data-elem-nyit]').forEach(b => b.onclick = () => { kivalasztottKulcs = b.dataset.elemNyit; kartotekNezet = null; kivalasztottVerzio = null; render(); });
+  const sz = $('[data-alk-szerk]'); if(sz) sz.onclick = () => szerkesztAlkModal(kod);
+}
+
+/* ============ SZOLGÁLTATÁS MODÁL ============ */
+function szolgModal(letezo){
+  const cim = letezo ? 'Szolgáltatás szerkesztése' : 'Új szolgáltatás';
+  modalNyit(cim, `
+    <label>Kód${letezo?' <span style="font-weight:400">(nem módosítható)</span>':''}</label>
+    <input type="text" id="mKod" placeholder="pl. FAIR" value="${letezo?esc(letezo.kod):''}" ${letezo?'disabled':''}>
+    <label>Megnevezés</label><input type="text" id="mNev" value="${letezo?esc(letezo.nev):''}" placeholder="pl. FAIR üzleti szolgáltatás">
+    <label>Leírás</label><textarea id="mLeiras">${letezo?esc(letezo.leiras):''}</textarea>
+    <label>Felelős</label><input type="text" id="mFelelos" value="${letezo?esc(letezo.felelos||''):''}">
+    <div class="hiba" id="mHiba"></div>
+    ${!letezo?'<p style="font-size:11.5px;color:var(--t-leges);margin-top:10px">A kód az alkalmazások és elemek azonosítójának nem része, de a szolgáltatás egyedi rövid neve. Később nem változtatható.</p>':''}`,
+    () => {
+      const hiba = $('#mHiba'); const nev = $('#mNev').value.trim();
+      if(!nev){ hiba.textContent='A megnevezés kötelező.'; hiba.style.display='block'; return false; }
+      if(letezo){
+        letezo.nev = nev; letezo.leiras = $('#mLeiras').value.trim(); letezo.felelos = $('#mFelelos').value.trim();
+        letezo.modositotta = szerepkor();
+        (letezo.naplo = letezo.naplo||[]).push({mikor:simDatum(), ki:szerepkor(), megj:'adatok módosítva'});
+        toast('Szolgáltatás frissítve: ' + letezo.kod);
+      } else {
+        const kod = $('#mKod').value.trim();
+        if(!/^[A-Za-z0-9_]+$/.test(kod)){ hiba.textContent='A kód csak betűt, számot és aláhúzást tartalmazhat (kötőjel nélkül).'; hiba.style.display='block'; return false; }
+        if(szolgById(kod)){ hiba.textContent='Ez a szolgáltatás-kód már létezik.'; hiba.style.display='block'; return false; }
+        SZOLGALTATASOK.push({kod, nev, leiras:$('#mLeiras').value.trim(), felelos:$('#mFelelos').value.trim(),
+          letrehozva:simDatum(), modositotta:szerepkor(),
+          naplo:[{mikor:simDatum(), ki:szerepkor(), megj:'szolgáltatás létrehozása'}]});
+        kivalasztottSzolg = kod; kartotekNezet = null; kivalasztottKulcs = null;
+        toast('Létrejött a szolgáltatás: ' + kod);
+      }
+    });
+}
+const ujSzolgModal = () => szolgModal(null);
+const szerkesztSzolgModal = kod => szolgModal(szolgById(kod));
+
+/* ============ ALKALMAZÁS MODÁL ============ */
+function alkModal(letezo, alapSzolg){
+  const cim = letezo ? 'Alkalmazás szerkesztése' : 'Új alkalmazás';
+  const szolgOpciok = SZOLGALTATASOK.map(s => `<option value="${esc(s.kod)}" ${
+    (letezo?letezo.szolg:alapSzolg)===s.kod?'selected':''}>${esc(s.kod)} — ${esc(s.nev)}</option>`).join('');
+  modalNyit(cim, `
+    <label>Szolgáltatás</label><select id="mSzolg">${szolgOpciok}</select>
+    <label>Kód${letezo?' <span style="font-weight:400">(nem módosítható — az elemek azonosítója erre épül)</span>':''}</label>
+    <input type="text" id="mKod" placeholder="pl. 3R" value="${letezo?esc(letezo.kod):''}" ${letezo?'disabled':''}>
+    <label>Megnevezés</label><input type="text" id="mNev" value="${letezo?esc(letezo.nev):''}" placeholder="pl. Rendezvényregisztrációs rendszer">
+    <label>Leírás</label><textarea id="mLeiras">${letezo?esc(letezo.leiras):''}</textarea>
+    <label>Rétegek <span style="font-weight:400">(vesszővel elválasztva)</span></label>
+    <input type="text" id="mRetegek" value="${letezo?esc(letezo.retegek.join(', ')):''}" placeholder="pl. FE, Core">
+    <label>Felelős</label><input type="text" id="mFelelos" value="${letezo?esc(letezo.felelos||''):''}">
+    <label>Last release / version <span style="font-weight:400">(opcionális)</span></label>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="mRelease" style="flex:1" value="${letezo?esc(letezo.lastRelease||''):''}" placeholder="R1 · 2026. 01. 01.">
+      <input type="text" id="mVersion" style="flex:1" value="${letezo?esc(letezo.lastVersion||''):''}" placeholder="0.1.0">
+    </div>
+    <div class="hiba" id="mHiba"></div>
+    ${!letezo?'<p style="font-size:11.5px;color:var(--t-leges);margin-top:10px">A kód lesz az elemazonosítók előtagja (pl. <b>'+'KÓD</b>-FE-TUS-001). Később nem módosítható.</p>':''}`,
+    () => {
+      const hiba = $('#mHiba'); const nev = $('#mNev').value.trim();
+      const retegek = $('#mRetegek').value.split(',').map(s=>s.trim()).filter(Boolean);
+      if(!nev){ hiba.textContent='A megnevezés kötelező.'; hiba.style.display='block'; return false; }
+      if(letezo){
+        letezo.szolg = $('#mSzolg').value; letezo.nev = nev; letezo.leiras = $('#mLeiras').value.trim();
+        letezo.retegek = retegek; letezo.felelos = $('#mFelelos').value.trim();
+        letezo.lastRelease = $('#mRelease').value.trim(); letezo.lastVersion = $('#mVersion').value.trim();
+        letezo.modositotta = szerepkor();
+        (letezo.naplo = letezo.naplo||[]).push({mikor:simDatum(), ki:szerepkor(), megj:'adatok módosítva'});
+        toast('Alkalmazás frissítve: ' + letezo.kod);
+      } else {
+        const kod = $('#mKod').value.trim();
+        if(!/^[A-Za-z0-9_]+$/.test(kod)){ hiba.textContent='A kód csak betűt, számot és aláhúzást tartalmazhat (kötőjel nélkül).'; hiba.style.display='block'; return false; }
+        if(alkById(kod)){ hiba.textContent='Ez az alkalmazás-kód már létezik.'; hiba.style.display='block'; return false; }
+        ALKALMAZASOK.push({kod, szolg:$('#mSzolg').value, nev, leiras:$('#mLeiras').value.trim(),
+          retegek, lastRelease:$('#mRelease').value.trim(), lastVersion:$('#mVersion').value.trim(),
+          felelos:$('#mFelelos').value.trim(), letrehozva:simDatum(), modositotta:szerepkor(),
+          naplo:[{mikor:simDatum(), ki:szerepkor(), megj:'alkalmazás létrehozása'}]});
+        kivalasztottSzolg = $('#mSzolg').value; kartotekNezet = {tipus:'alk', kod}; kivalasztottKulcs = null;
+        toast('Létrejött az alkalmazás: ' + kod);
+      }
+    });
+}
+const ujAlkModal = alapSzolg => alkModal(null, alapSzolg);
+const szerkesztAlkModal = kod => alkModal(alkById(kod), null);
+
+function renderKartya(){
+  const elem = elemByKulcs(kivalasztottKulcs);
+  if(!elem){
+    if(kartotekNezet && kartotekNezet.tipus === 'szolg'){ renderSzolgKartya(kartotekNezet.kod); return; }
+    if(kartotekNezet && kartotekNezet.tipus === 'alk'){ renderAlkKartya(kartotekNezet.kod); return; }
+    renderAttekintes(); return;
+  }
+  const ver = megjelenitendoVerzio(elem);
+  const tip = TIPUSOK[elem.tipus];
+  const hint = autoHint(ver);
+  const dokumentum = elem.tipus === 'BD' || elem.tipus === 'TD';
+  const szerkAktiv = szerkeszt && szerkeszt.kulcs===elem.kulcs && szerkeszt.v===ver.v;
+  const vazlat = ver.statusz === 'Vázlat';
+  const szerzo = szerepkor() === 'Szerző';
+  const kapcsSzerk = vazlat && (szerzo || szerepkor()==='Admin');
+  const cimkezheto = szerzo || szerepkor()==='Admin';
+
+  const kimeno = KAPCSOLATOK.filter(k => k.forras === elem.kulcs);
+  const bejovo = KAPCSOLATOK.filter(k => k.cel === elem.kulcs);
+  const fajtak = [...new Set(kimeno.map(k => k.fajta))];
+  const kimenoSor = k => {
+    const celElem = elemByKulcs(k.cel);
+    const fo = celElem
+      ? `<button class="kapcs-link" data-ugras="${k.cel}">${k.cel} — ${esc(celElem.cim)}</button>`
+      : `<span class="kapcs-kulso">${k.cel}${SZABALYZATOK[k.cel] ? ' — ' + esc(SZABALYZATOK[k.cel].nev) : ''}</span>`;
+    return kapcsSzerk
+      ? `<div class="kapcs-sor-szerk">${fo}<button class="kapcs-torol" title="Kapcsolat törlése" data-kt-cel="${esc(k.cel)}" data-kt-fajta="${esc(k.fajta)}">✕</button></div>`
+      : fo;
+  };
+  const kapcsHtml = (kimeno.length || bejovo.length) ? `
+    ${fajtak.map(f => `<div class="kapcs-csoport"><span class="kapcs-fajta">${esc(f)}</span>${
+      kimeno.filter(k => k.fajta === f).map(kimenoSor).join('')
+    }</div>`).join('')}
+    ${bejovo.length ? `<div class="bejovo">Erre hivatkozik: ${bejovo.map(k =>
+      `<button class="kapcs-link" data-ugras="${k.forras}">${k.forras}</button> <span style="color:var(--t-leges)">(${esc(k.fajta)})</span>`).join(' · ')}</div>` : ''}`
+    : '<div class="torzs"><span class="ures">Nincs kapcsolat.</span></div>';
+
+  const muveletek = lehetsegesMuveletek(elem, ver);
+  const aktSzerep = szerepkor();
+  const sajat = muveletek.filter(m => m.szerep === aktSzerep);
+  const masSzerepek = [...new Set(muveletek.filter(m => m.szerep !== aktSzerep).map(m => m.szerep))];
+  const akcioHtml = (sajat.length ? sajat.map((m,i) =>
+      `<button class="gomb ${m.veszelyes?'veszelyes':(m.masodlagos||i>0?'masodlagos':'elsodleges')}" data-akcio="${m.akcio}">${esc(m.label)}</button>`
+    ).join('') : '') +
+    (masSzerepek.length ? `<span class="szerep-hint">További műveletek: ${masSzerepek.join(', ')} szerepkörben</span>` : '') +
+    (!muveletek.length ? `<span class="szerep-hint">${['Archivált','Elvetve'].includes(ver.statusz)
+        ? 'Végállapot — nincs további művelet.' : 'Innen az ütemező léptet tovább, dátum alapján.'}</span>` : '');
+
+  $('#fo').innerHTML = `
+    <div class="reszlet-fej">
+      <div class="rf-felso">
+        <div class="rf-cimblokk">
+          <div class="morzsa-sor">
+            <button data-morzsa="att">Áttekintés</button><span>/</span>
+            <button data-morzsa="szolg">${esc(szolgOfAlk(alkOf(elem))||'FAIR')}</button><span>/</span>
+            <button data-morzsa="alk">${alkOf(elem)}</button><span>/</span>
+            <span class="kulcs-chip">${elem.kulcs} <span style="color:var(--t-leges)">v${ver.v}</span></span>
+          </div>
+          <h2 class="reszlet-cim">${esc(elem.cim)}</h2>
+          <div class="reszlet-altipus">${tip.nev}${elem.reteg ? ' · ' + elem.reteg + ' réteg' : ''} · ${tip.uzleti ? 'üzleti elem' : 'technikai elem'}</div>
+        </div>
+        <div class="rf-akciok">${akcioHtml}</div>
+      </div>
+      ${stepperHtml(ver)}
+    </div>
+
+    <div class="reszlet-test">
+      <div class="tartalom">
+        ${szerkAktiv ? `
+        <div class="blokk szerk-blokk">
+          <div class="szerk-fej">
+            <span class="blokk-cim" style="margin:0">Szerkesztés — v${ver.v} (Vázlat)</span>
+            <span class="tolto"></span>
+            <button class="gomb masodlagos" id="szerkMegse">Mégse</button>
+            <button class="gomb elsodleges" id="szerkMentes">Mentés</button>
+          </div>
+          <label class="szerk-cimke">Rövid leírás</label>
+          <input type="text" id="szerkRovid" value="${esc(ver.rovid).replace(/"/g,'&quot;')}">
+          <label class="szerk-cimke">Részletes leírás</label>
+          <div class="szerk-mod-valto" id="szerkModValto">
+            <button data-mod="vizualis" class="${szerkMod==='vizualis'?'aktiv':''}">Vizuális</button>
+            <button data-mod="forras" class="${szerkMod==='forras'?'aktiv':''}">Forrás (markdown)</button>
+          </div>
+          <div id="wysiwygMezo" style="${szerkMod==='vizualis'?'':'display:none'}">
+            <div class="wysiwyg-keret">
+              <div class="wysiwyg-eszkoz" id="wysiwygEszkoz">
+                <button data-cmd="bold" title="Félkövér"><b>B</b></button>
+                <button data-cmd="italic" title="Dőlt"><i>I</i></button>
+                <span class="valaszto"></span>
+                <button data-cmd="h1" title="Címsor 1">H1</button>
+                <button data-cmd="h2" title="Címsor 2">H2</button>
+                <button data-cmd="h3" title="Címsor 3">H3</button>
+                <span class="valaszto"></span>
+                <button data-cmd="bullet" title="Felsorolás">• Lista</button>
+                <button data-cmd="ordered" title="Számozott lista">1. Lista</button>
+                <button data-cmd="quote" title="Idézet">❝</button>
+                <span class="valaszto"></span>
+                <button data-cmd="table" title="Táblázat">⊞ Tábla</button>
+                <button data-cmd="code" title="Kódblokk">&lt;/&gt;</button>
+                <button data-cmd="link" title="Hivatkozás">🔗</button>
+                ${(ver.mellekletek||[]).length ? '<button data-cmd="mell" title="Melléklet beszúrása">📎 Melléklet</button>' : ''}
+              </div>
+              <div class="wysiwyg" id="wysiwyg"></div>
+              <div class="wysiwyg-jel">A vizuális szerkesztő markdownként tárol. Speciális blokkok (Mermaid, melléklet) pontos szerkesztéséhez válts Forrás módra.</div>
+            </div>
+          </div>
+          <div id="forrasMezo" style="${szerkMod==='forras'?'':'display:none'}">
+            <div class="szerk-eszkoz">
+              <button class="chip" data-snippet="tabla">+ Táblázat</button>
+              <button class="chip" data-snippet="mermaid">+ Mermaid</button>
+              <button class="chip" data-snippet="kod">+ Kód</button>
+              ${(ver.mellekletek||[]).length ? `<select id="szerkMellValaszto">${(ver.mellekletek||[]).map(m=>`<option value="${m.id}">${esc(m.nev)}</option>`).join('')}</select>
+              <button class="chip" data-snippet="mell">+ Melléklet beszúrása</button>` : ''}
+            </div>
+          </div>
+          <textarea id="szerkLeiras" spellcheck="false" style="${szerkMod==='forras'?'':'display:none'}">${esc(ver.leiras)}</textarea>
+          ${dokumentum ? '' : `
+          <label class="szerk-cimke">Előfeltételek</label>
+          <textarea id="szerkElofeltetelek" class="szerk-mezo-kicsi" spellcheck="false">${esc(ver.elofeltetelek||'')}</textarea>
+          <label class="szerk-cimke">Elfogadási kritériumok</label>
+          <textarea id="szerkKriteriumok" class="szerk-mezo-kicsi" spellcheck="false">${esc(ver.kriteriumok||'')}</textarea>`}
+          <div class="blokk-cim" style="margin-top:12px">Élő előnézet</div>
+          <div class="torzs szerk-elonezet" id="szerkElonezet"></div>
+        </div>` : `
+        <div class="blokk"><div class="blokk-cim">Rövid leírás</div>
+          <div class="torzs">${esc(ver.rovid) || '<span class="ures">Nincs kitöltve.</span>'}</div></div>
+        <div class="blokk"><div class="blokk-cim blokk-cim-sor">Részletes leírás
+          ${ver.statusz==='Vázlat' && szerepkor()==='Szerző'
+            ? '<button class="szerk-gomb" data-szerk>Szerkesztés</button>'
+            : (ver.statusz!=='Vázlat' ? '<span class="zar-hint" title="A tartalom csak Vázlat státuszban szerkeszthető — módosításhoz nyiss új verziót.">🔒 csak Vázlatban szerkeszthető</span>' : '')}
+        </div>
+          <div class="torzs">${miniMd(ver.leiras, ver.mellekletek)}</div></div>`}
+        ${(szerkAktiv && !dokumentum) ? '' : (dokumentum ? `
+        <div class="blokk"><div class="blokk-cim">CIA besorolás</div>
+          <div class="cia-racs">
+            <div class="cia-cella"><b>${ver.cia.c}</b><span>BIZALMASSÁG</span></div>
+            <div class="cia-cella"><b>${ver.cia.i}</b><span>SÉRTETLENSÉG</span></div>
+            <div class="cia-cella"><b>${ver.cia.a}</b><span>RENDELKEZÉSRE ÁLLÁS</span></div>
+          </div></div>` : `
+        <div class="ketted">
+          <div class="blokk"><div class="blokk-cim">Előfeltételek</div>
+            <div class="torzs">${miniMd(ver.elofeltetelek, ver.mellekletek)}</div></div>
+          <div class="blokk"><div class="blokk-cim">Kritériumok</div>
+            <div class="torzs">${miniMd(ver.kriteriumok, ver.mellekletek)}</div></div>
+        </div>`)}
+      </div>
+
+      <div class="oldalsav">
+        <div class="blokk"><div class="blokk-cim">Verziók</div>
+          <div class="verzio-lista">
+            ${elem.verziok.map(v => `<button class="verzio-tab ${v.v===ver.v?'aktiv':''}" data-verzio="${v.v}">
+              <span class="vszam">v${v.v}</span><span class="tolto"></span>
+              <span class="badge mini b-${v.statusz}">${v.statusz}</span></button>`).join('')}
+          </div></div>
+        <div class="blokk"><div class="blokk-cim">Hatályosság</div>
+          ${hatalyHtml(ver)}
+          ${hint ? `<div class="auto-hint"><span>⏱</span><span>${hint}</span></div>` : ''}</div>
+        <div class="blokk"><div class="blokk-cim">Mellékletek · ${(ver.mellekletek||[]).length}</div>
+          ${(ver.mellekletek||[]).length ? (ver.mellekletek||[]).map(m => {
+            const belyeg = m.fajta==='kep' ? m.adat : (m.fajta==='figma' ? m.kep : null);
+            return `
+            <div class="mell-sor mell-sor-kart" data-mellnez="${m.id}">
+              ${belyeg
+                ? `<span class="mell-belyeg"><img src="${belyeg}" alt=""></span>`
+                : `<span class="mell-ikon mell-ikon-${m.fajta}">${m.fajta==='csv'?'⠿':m.fajta==='figma'?'F':m.fajta==='video'?'▶':'📄'}</span>`}
+              <div class="mell-sor-szoveg"><b>${esc(m.nev)}</b>
+                <div class="mell-meta">${m.fajta}${m.fajta==='figma'&&!m.kep?' · pillanatkép a jóváhagyáskor':''} · ${esc(m.feltolto)} · ${datumHu(m.mikor)}</div></div>
+              ${m.fajta==='figma' && m.forrasUrl ? `<a class="mell-link" href="${esc(m.forrasUrl)}" target="_blank" rel="noopener" title="Megnyitás Figmában">↗</a>` : ''}
+            </div>`;
+          }).join('') : '<div class="torzs"><span class="ures">Nincs melléklet.</span></div>'}
+          ${ver.statusz==='Vázlat' ? `
+            <div class="mell-gombsor">
+              <label class="chip mell-feltolt">+ Fájl (kép / CSV / videó)<input type="file" id="mellFajl" hidden accept="image/*,.csv,text/csv,video/*"></label>
+              <button class="chip" id="mellFigma">+ Figma frame</button>
+            </div>`
+          : '<div class="mell-zar">A mellékletek a verzióhoz fagyasztva — csak Vázlatban módosíthatók.</div>'}
+        </div>
+        <div class="blokk"><div class="blokk-cim">Kapcsolatok</div>${kapcsHtml}
+          ${kapcsSzerk ? '<button class="kapcs-add" id="kapcsAdd">+ Kapcsolat hozzáadása</button>'
+            : (!vazlat ? '<div class="kapcs-zar">A kapcsolatok Vázlat státuszban, Szerző/Admin szerepkörrel szerkeszthetők.</div>' : '')}</div>
+        <div class="blokk">
+          <div class="blokk-cim cimke-szerk-fej">Címkék<span class="tolto"></span>
+            ${cimkezheto ? `<button class="cimke-szerk-gomb" id="cimkeToggle">${cimkeSzerk?'Kész':'Szerkesztés'}</button>` : ''}
+          </div>
+          ${(cimkeSzerk && cimkezheto) ? `
+            <div>${elem.tagek.length ? elem.tagek.map((t,i)=>`<span class="tag-chip-szerk">${esc(t)}<button class="tag-chip-x" data-cimketorol="${i}" title="Eltávolítás">✕</button></span>`).join('') : '<span class="ures" style="font-size:12px;font-style:italic;color:var(--t-leges)">Még nincs címke.</span>'}</div>
+            <div class="cimke-uj-sor">
+              <input type="text" id="cimkeUj" placeholder="Új címke… (Enter)" list="cimkeLista" autocomplete="off">
+              <datalist id="cimkeLista">${osszesCimke().map(t=>`<option value="${esc(t)}"></option>`).join('')}</datalist>
+              <button class="chip" id="cimkeHozzaad">+</button>
+            </div>
+            ${(() => { const jav = osszesCimke().filter(t=>!elem.tagek.includes(t)).slice(0,14);
+              return jav.length ? `<div class="cimke-keszlet"><span class="cimke-keszlet-cim">Közös készlet</span>${jav.map(t=>`<button class="cimke-javaslat" data-cimkejavaslat="${esc(t)}">${esc(t)}</button>`).join('')}</div>` : ''; })()}
+          ` : (elem.tagek.length ? elem.tagek.map(t=>'<span class="tag-chip">'+esc(t)+'</span>').join('') : '<div class="torzs"><span class="ures">Nincs címke.</span></div>')}
+        </div>
+        <div class="blokk"><div class="blokk-cim">Audit</div>
+          <div class="audit-sor">
+            <span>Létrehozva · ${datumHu(ver.letrehozva)}</span>
+            <span>Utolsó módosító · ${esc(ver.modositotta)}</span>
+            <span>Verzió · v${ver.v} / ${elem.verziok.length}</span>
+          </div></div>
+        <div class="blokk"><div class="blokk-cim">Napló</div>
+          <div class="ido-lista">${[...ver.naplo].reverse().map(n => {
+            const szin = (ST_SZIN[n.hova]||['#6B7585'])[0];
+            return `<div class="ido-sor">
+              <span class="ido-pont" style="background:${n.hova==='Elvetve'?'#D6220F':szin}"></span>
+              <div class="ido-tartalom">
+                <div class="ido-cim">${esc(n.honnan)} → ${esc(n.hova)}</div>
+                <div class="ido-meta">${datumHu(n.mikor)} · ${n.ki==='RENDSZER'?'<span class="naplo-rendszer">RENDSZER</span>':esc(n.ki)}</div>
+                ${n.megj?`<div class="ido-megj">${esc(n.megj)}</div>`:''}
+              </div></div>`;
+          }).join('')}</div></div>
+      </div>
+    </div>`;
+
+  document.querySelectorAll('[data-verzio]').forEach(b => b.onclick = () => { kivalasztottVerzio = parseInt(b.dataset.verzio,10); szerkeszt = null; render(); });
+  document.querySelectorAll('[data-ugras]').forEach(b => b.onclick = () => { kivalasztottKulcs = b.dataset.ugras; kivalasztottVerzio = null; szerkeszt = null; render(); });
+  document.querySelectorAll('[data-akcio]').forEach(b => b.onclick = () => muvelet(b.dataset.akcio));
+  if(window.mermaid){
+    document.querySelectorAll('.md-mermaid-fallback').forEach(x => x.remove());
+    try{ mermaid.run({nodes: document.querySelectorAll('pre.mermaid:not(.kesz)')}).then(()=>{}); }catch(e){}
+    document.querySelectorAll('pre.mermaid').forEach(p=>p.classList.add('kesz'));
+  }
+  /* --- Szerkesztő --- */
+  const szGomb = document.querySelector('[data-szerk]');
+  if(szGomb) szGomb.onclick = () => { szerkeszt = {kulcs:elem.kulcs, v:ver.v}; render(); };
+  const ta = $('#szerkLeiras');
+  if(ta){
+    let ido = null;
+    const elonezet = () => {
+      $('#szerkElonezet').innerHTML = miniMd(ta.value, ver.mellekletek);
+      if(window.mermaid){
+        document.querySelectorAll('#szerkElonezet .md-mermaid-fallback').forEach(x=>x.remove());
+        try{ mermaid.run({nodes: document.querySelectorAll('#szerkElonezet pre.mermaid')}); }catch(e){}
+      }
+    };
+    ta.addEventListener('input', () => { clearTimeout(ido); ido = setTimeout(elonezet, 350); });
+    elonezet();
+    const beszur = txt => {
+      const p = ta.selectionStart ?? ta.value.length;
+      ta.value = ta.value.slice(0,p) + txt + ta.value.slice(ta.selectionEnd ?? p);
+      ta.focus(); ta.selectionStart = ta.selectionEnd = p + txt.length;
+      clearTimeout(ido); elonezet();
+    };
+    const SNIPPET = {
+      tabla:  '\n\n| Fejléc 1 | Fejléc 2 |\n| --- | --- |\n| érték | érték |\n',
+      mermaid:'\n\n```mermaid\nflowchart LR\n  A[Kezdet] --> B[Vége]\n```\n',
+      kod:    '\n\n```json\n{\n  "kulcs": "érték"\n}\n```\n'
+    };
+    document.querySelectorAll('[data-snippet]').forEach(b => b.onclick = () => {
+      if(b.dataset.snippet === 'mell'){
+        const id = $('#szerkMellValaszto').value;
+        const m = (ver.mellekletek||[]).find(x=>x.id===id);
+        beszur(`\n\n![${m? m.nev : ''}](melleklet:${id})\n`);
+      } else beszur(SNIPPET[b.dataset.snippet]);
+    });
+    $('#szerkMentes').onclick = () => {
+      if(szerkMod==='vizualis' && wysiwygPeldany){
+        try{ ta.value = wysiwygPeldany.storage.markdown.getMarkdown(); }catch(e){}
+      }
+      ver.rovid = $('#szerkRovid').value;
+      ver.leiras = ta.value;
+      const ef = $('#szerkElofeltetelek'); if(ef) ver.elofeltetelek = ef.value;
+      const kr = $('#szerkKriteriumok'); if(kr) ver.kriteriumok = kr.value;
+      ver.modositotta = szerepkor();
+      wysiwygTeardown(); szerkeszt = null;
+      toast(elem.kulcs + ' v' + ver.v + ' tartalma mentve'); render();
+    };
+    $('#szerkMegse').onclick = () => { wysiwygTeardown(); szerkeszt = null; render(); };
+
+    /* --- Vizuális / Forrás mód-váltó --- */
+    const modValto = $('#szerkModValto');
+    if(modValto) modValto.querySelectorAll('[data-mod]').forEach(b => b.onclick = () => {
+      const ujMod = b.dataset.mod;
+      if(ujMod === szerkMod) return;
+      if(szerkMod==='vizualis' && wysiwygPeldany){
+        try{ ta.value = wysiwygPeldany.storage.markdown.getMarkdown(); }catch(e){}
+      }
+      wysiwygTeardown();
+      szerkMod = ujMod;
+      render();
+    });
+
+    /* --- Az előfeltétel/kritérium mezők is frissítsék az élő előnézetet (csak a leírásra, de a beírás közben ne vesszen el) --- */
+    ['szerkElofeltetelek','szerkKriteriumok'].forEach(id => {
+      const m = $('#'+id); if(m) m.addEventListener('input', ()=>{});
+    });
+
+    /* --- Vizuális szerkesztő mountolása, ha az van kiválasztva --- */
+    if(szerkMod==='vizualis') wysiwygInit(ta, ver, elonezet);
+  }
+  /* --- Mellékletek --- */
+  const mf = $('#mellFajl');
+  if(mf) mf.addEventListener('change', () => {
+    const f = mf.files[0]; if(!f) return;
+    const r = new FileReader();
+    const kep = f.type.startsWith('image/');
+    const video = f.type.startsWith('video/');
+    const fajta = kep ? 'kep' : (video ? 'video' : 'csv');
+    r.onload = () => {
+      (ver.mellekletek = ver.mellekletek || []).push({
+        id:'M'+Date.now(), fajta, nev:f.name,
+        adat:r.result, feltolto:szerepkor(), mikor:simDatum()});
+      toast('Melléklet hozzáadva: '+f.name); render();
+    };
+    (kep || video) ? r.readAsDataURL(f) : r.readAsText(f);
+  });
+  const mfg = $('#mellFigma');
+  if(mfg) mfg.onclick = () => modalNyit('Figma frame csatolása', `
+    <p>Élesben a rendszer a megadott frame-ről <b>pillanatképet rögzít</b> a verzióhoz (Figma API), a link pedig az élő tervre mutat.</p>
+    <label>Frame neve</label><input type="text" id="mFigmaNev" placeholder="pl. Regisztrációs űrlap — mobil">
+    <label>Figma URL</label><input type="text" id="mFigmaUrl" placeholder="https://www.figma.com/design/…?node-id=…">
+    <div class="hiba" id="mHiba"></div>`,
+    () => {
+      const nev = $('#mFigmaNev').value.trim(), url = $('#mFigmaUrl').value.trim();
+      const hiba = $('#mHiba');
+      if(!nev){ hiba.textContent='A név kötelező.'; hiba.style.display='block'; return false; }
+      if(!/^https:\/\/(www\.)?figma\.com\//.test(url)){ hiba.textContent='Érvényes figma.com URL-t adj meg.'; hiba.style.display='block'; return false; }
+      (ver.mellekletek = ver.mellekletek || []).push({
+        id:'M'+Date.now(), fajta:'figma', nev, forrasUrl:url, kep:null,
+        feltolto:szerepkor(), mikor:simDatum()});
+      toast('Figma frame csatolva: '+nev);
+    });
+  document.querySelectorAll('[data-mellnez]').forEach(sor => sor.onclick = e => {
+    if(e.target.closest('a')) return; // a ↗ link a saját dolgát végezze
+    const id = sor.dataset.mellnez;
+    const cel = document.querySelector('.mell-kep[data-mid="'+id+'"], .mell-figma[data-mid="'+id+'"], .mell-csv[data-mid="'+id+'"]');
+    if(cel){ cel.scrollIntoView({behavior:'smooth', block:'center'}); cel.classList.add('mell-kiemel');
+      setTimeout(()=>cel.classList.remove('mell-kiemel'), 1400); }
+    else { toast('Ez a melléklet a leírásban jelenik meg, ha hivatkozod: ![…](melleklet:'+id+')'); }
+  });
+  /* --- Kapcsolat CRUD --- */
+  document.querySelectorAll('[data-kt-cel]').forEach(b => b.onclick = () => {
+    const cel = b.dataset.ktCel, fajta = b.dataset.ktFajta;
+    const i = KAPCSOLATOK.findIndex(k => k.forras===elem.kulcs && k.cel===cel && k.fajta===fajta);
+    if(i>=0){ KAPCSOLATOK.splice(i,1); toast('Kapcsolat törölve: '+fajta+' → '+cel); render(); }
+  });
+  const kapcsAddGomb = $('#kapcsAdd');
+  if(kapcsAddGomb) kapcsAddGomb.onclick = () => {
+    const celek = kapcsCelLista(elem.kulcs);
+    const opt = celek.map(c => `<option value="${esc(c.kulcs)}">${esc(c.kulcs)} — ${esc(c.nev)} · ${c.csoport}</option>`).join('');
+    const fopt = KAPCS_FAJTAK.map(f => `<option value="${f}">${f}</option>`).join('');
+    modalNyit('Kapcsolat hozzáadása', `
+      <p>Új kapcsolat a(z) <b>${esc(elem.kulcs)}</b> elemből.</p>
+      <div class="kapcs-mezo-sor">
+        <div><label>Fajta</label><select id="kFajta">${fopt}</select></div>
+        <div><label>Cél</label><select id="kCel">${opt}</select></div>
+      </div>
+      <div class="hiba" id="kHiba"></div>`,
+      () => {
+        const fajta = $('#kFajta').value, cel = $('#kCel').value;
+        const hiba = kapcsValidal(elem.kulcs, cel, fajta);
+        if(hiba){ const h = $('#kHiba'); h.textContent = hiba; h.style.display='block'; return false; }
+        KAPCSOLATOK.push({forras:elem.kulcs, cel, fajta});
+        toast('Kapcsolat hozzáadva: '+fajta+' → '+cel);
+      });
+  };
+
+  /* --- Címke chip-szerkesztő --- */
+  const cimkeToggle = $('#cimkeToggle');
+  if(cimkeToggle) cimkeToggle.onclick = () => { cimkeSzerk = !cimkeSzerk; render(); };
+  document.querySelectorAll('[data-cimketorol]').forEach(b => b.onclick = () => {
+    const i = parseInt(b.dataset.cimketorol, 10);
+    if(i>=0 && i<elem.tagek.length){ elem.tagek.splice(i,1); render(); }
+  });
+  const cimkeUjBevitel = () => {
+    const inp = $('#cimkeUj'); if(!inp) return;
+    const ertek = inp.value.trim().replace(/[,;]+$/,'').trim();
+    if(!ertek) return;
+    if(elem.tagek.includes(ertek)){ toast('Ez a címke már szerepel.'); inp.value=''; return; }
+    elem.tagek.push(ertek); render();
+  };
+  const cimkeHozzaadGomb = $('#cimkeHozzaad');
+  if(cimkeHozzaadGomb) cimkeHozzaadGomb.onclick = cimkeUjBevitel;
+  const cimkeInp = $('#cimkeUj');
+  if(cimkeInp) cimkeInp.addEventListener('keydown', e => {
+    if(e.key==='Enter' || e.key===','){ e.preventDefault(); cimkeUjBevitel(); }
+  });
+  document.querySelectorAll('[data-cimkejavaslat]').forEach(b => b.onclick = () => {
+    const t = b.dataset.cimkejavaslat;
+    if(!elem.tagek.includes(t)){ elem.tagek.push(t); render(); }
+  });
+
+  document.querySelectorAll('[data-morzsa]').forEach(b => b.onclick = () => {
+    const m = b.dataset.morzsa;
+    if(m === 'szolg'){ kartotekNezet = {tipus:'szolg', kod:szolgOfAlk(alkOf(elem))}; kivalasztottKulcs = null; kivalasztottVerzio = null; render(); return; }
+    if(m === 'alk'){ kartotekNezet = {tipus:'alk', kod:alkOf(elem)}; kivalasztottKulcs = null; kivalasztottVerzio = null; render(); return; }
+    // 'att' = áttekintés
+    kivalasztottSzolg = szolgOfAlk(alkOf(elem)) || kivalasztottSzolg;
+    kartotekNezet = null; kivalasztottKulcs = null; kivalasztottVerzio = null; render();
+  });
+}
+
+/* ============ WYSIWYG (TipTap) ============ */
+function wysiwygTeardown(){
+  if(wysiwygPeldany){
+    try{ wysiwygPeldany.destroy(); }catch(e){}
+    wysiwygPeldany = null;
+  }
+}
+
+function wysiwygForrasra(ta, uzenet){
+  szerkMod = 'forras';
+  const wm = document.getElementById('wysiwygMezo'); if(wm) wm.style.display='none';
+  const fm = document.getElementById('forrasMezo'); if(fm) fm.style.display='';
+  if(ta) ta.style.display='';
+  const valto = document.getElementById('szerkModValto');
+  if(valto){
+    valto.querySelectorAll('[data-mod]').forEach(b=>b.classList.toggle('aktiv', b.dataset.mod==='forras'));
+    const vizGomb = valto.querySelector('[data-mod="vizualis"]'); if(vizGomb) vizGomb.disabled = true;
+  }
+  if(fm && !document.getElementById('wysiwygHiba')){
+    const d = document.createElement('div'); d.className='wysiwyg-hiba'; d.id='wysiwygHiba';
+    d.textContent = uzenet;
+    fm.parentNode.insertBefore(d, fm);
+  }
+}
+
+async function wysiwygInit(ta, ver, elonezet){
+  const cel = document.getElementById('wysiwyg');
+  if(!cel || !ta) return;
+  let tt = null;
+  try{
+    tt = await Promise.race([
+      window.__tiptapReady,
+      new Promise(r => setTimeout(()=>r(null), 6000))
+    ]);
+  }catch(e){ tt = null; }
+  // időközben kiléphettünk vagy módot válthattunk
+  if(!document.getElementById('wysiwyg') || szerkMod!=='vizualis') return;
+  if(!tt || !tt.ok){
+    wysiwygForrasra(ta, 'A vizuális szerkesztő nem érhető el (offline vagy a CDN nem töltött be). A Forrás (markdown) mód aktív — a tartalom így is teljesen szerkeszthető.');
+    return;
+  }
+  try{
+    const {Editor, StarterKit, Markdown, Table, TableRow, TableCell, TableHeader, Image, Link} = tt;
+    const editor = new Editor({
+      element: cel,
+      extensions: [
+        StarterKit,
+        Markdown.configure({html:false, linkify:false, transformPastedText:true}),
+        Table.configure({resizable:false}), TableRow, TableHeader, TableCell,
+        Image.configure({inline:true, allowBase64:true}),
+        Link.configure({openOnClick:false})
+      ],
+      content: ta.value || '',
+      onUpdate: ({editor}) => {
+        try{ ta.value = editor.storage.markdown.getMarkdown(); }catch(e){}
+        clearTimeout(wysiwygInit._ido);
+        wysiwygInit._ido = setTimeout(elonezet, 350);
+      }
+    });
+    wysiwygPeldany = editor;
+    try{ editor.commands.setContent(ta.value || '', false); }catch(e){}
+
+    const eszkoz = document.getElementById('wysiwygEszkoz');
+    const frissitAktiv = () => {
+      if(!eszkoz) return;
+      eszkoz.querySelectorAll('[data-cmd]').forEach(b => {
+        const c = b.dataset.cmd; let a = false;
+        try{
+          if(c==='bold') a = editor.isActive('bold');
+          else if(c==='italic') a = editor.isActive('italic');
+          else if(c==='h1') a = editor.isActive('heading',{level:1});
+          else if(c==='h2') a = editor.isActive('heading',{level:2});
+          else if(c==='h3') a = editor.isActive('heading',{level:3});
+          else if(c==='bullet') a = editor.isActive('bulletList');
+          else if(c==='ordered') a = editor.isActive('orderedList');
+          else if(c==='quote') a = editor.isActive('blockquote');
+          else if(c==='code') a = editor.isActive('codeBlock');
+        }catch(e){}
+        b.classList.toggle('aktiv', a);
+      });
+    };
+    if(eszkoz) eszkoz.querySelectorAll('[data-cmd]').forEach(b => b.onclick = () => {
+      const c = b.dataset.cmd, ch = editor.chain().focus();
+      if(c==='bold') ch.toggleBold().run();
+      else if(c==='italic') ch.toggleItalic().run();
+      else if(c==='h1') ch.toggleHeading({level:1}).run();
+      else if(c==='h2') ch.toggleHeading({level:2}).run();
+      else if(c==='h3') ch.toggleHeading({level:3}).run();
+      else if(c==='bullet') ch.toggleBulletList().run();
+      else if(c==='ordered') ch.toggleOrderedList().run();
+      else if(c==='quote') ch.toggleBlockquote().run();
+      else if(c==='code') ch.toggleCodeBlock().run();
+      else if(c==='table') ch.insertTable({rows:2, cols:2, withHeaderRow:true}).run();
+      else if(c==='link'){ const url = prompt('Hivatkozás URL-je:'); if(url) ch.extendMarkRange('link').setLink({href:url}).run(); }
+      else if(c==='mell'){
+        const sel = document.getElementById('szerkMellValaszto');
+        const id = sel ? sel.value : ((ver.mellekletek||[])[0]||{}).id;
+        const m = (ver.mellekletek||[]).find(x => x.id===id);
+        if(m) editor.chain().focus().setImage({src:'melleklet:'+id, alt:m.nev}).run();
+      }
+      frissitAktiv();
+    });
+    editor.on('selectionUpdate', frissitAktiv);
+    editor.on('transaction', frissitAktiv);
+    frissitAktiv();
+  }catch(e){
+    wysiwygForrasra(ta, 'A vizuális szerkesztő indítása hibába ütközött — a Forrás (markdown) mód aktív.');
+  }
+}
+
+function render(){ renderAlk(); renderTabok(); renderTipusSzurok(); renderLista(); if(grafNezet) renderGraf(); else renderKartya(); }
+
+/* ============ ESEMÉNYEK ============ */
+$('#kereso').addEventListener('input', e => { szovegSzuro = e.target.value; render(); });
+$('#szerepkor').addEventListener('change', render);
+$('#btnUtemezo').addEventListener('click', utemezoFut);
+$('#btnUjElem').addEventListener('click', ujElemModal);
+$('#btnAttekintes').addEventListener('click', () => { kivalasztottKulcs = null; kivalasztottVerzio = null; grafNezet = false; $('#btnGraf').classList.remove('aktiv'); $('#btnGraf').setAttribute('aria-pressed','false'); render(); });
+$('#btnGraf').addEventListener('click', () => {
+  grafNezet = !grafNezet; vbGraf = null;
+  $('#btnGraf').classList.toggle('aktiv', grafNezet);
+  $('#btnGraf').setAttribute('aria-pressed', String(grafNezet));
+  render();
+});
+document.querySelector('.brand').style.cursor = 'pointer';
+document.querySelector('.brand').addEventListener('click', () => { kivalasztottKulcs = null; alkSzuro=''; render(); });
+document.addEventListener('keydown', e => {
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k'){ e.preventDefault(); $('#kereso').focus(); }
+  if(e.key === 'Escape'){ $('#modalGyoker').innerHTML = ''; }
+});
+
+if(window.mermaid) mermaid.initialize({startOnLoad:false, theme:'neutral', fontFamily:'Inter'});
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+# Éles összeállítás: MongoDB (egy-node-os replica set), API és web (nginx).
+# Indítás: docker compose -f docker-compose.prod.yml up -d --build
+# Konfiguráció: másold a .env.example-t .env-re és töltsd ki.
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    command: ['--replSet', 'rs0', '--bind_ip_all']
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: >
+        echo "try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]}) }"
+        | mongosh --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 5s
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      API_PORT: '3001'
+      MONGO_URI: 'mongodb://mongo:27017/kartotek?replicaSet=rs0'
+      TARHELY_DIR: /data/tarhely
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-300}
+      AUTH_PROVIDER: ${AUTH_PROVIDER:-dev}
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_AUDIENCE: ${OIDC_AUDIENCE:-}
+      OIDC_JWKS_URI: ${OIDC_JWKS_URI:-}
+    volumes:
+      - tarhely-data:/data/tarhely
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: /api
+    restart: unless-stopped
+    ports:
+      - '${WEB_PORT:-8080}:80'
+    depends_on:
+      - api
+
+volumes:
+  mongo-data:
+  tarhely-data:

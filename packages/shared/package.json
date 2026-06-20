@@ -1,0 +1,63 @@
+{
+  "name": "@kartotek/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./tipusok": {
+      "development": "./src/tipusok.ts",
+      "types": "./dist/tipusok.d.ts",
+      "default": "./dist/tipusok.js"
+    },
+    "./allapotgep": {
+      "development": "./src/allapotgep/index.ts",
+      "types": "./dist/allapotgep/index.d.ts",
+      "default": "./dist/allapotgep/index.js"
+    },
+    "./jogosultsag": {
+      "development": "./src/jogosultsag/index.ts",
+      "types": "./dist/jogosultsag/index.d.ts",
+      "default": "./dist/jogosultsag/index.js"
+    },
+    "./kapcsolat": {
+      "development": "./src/kapcsolat/index.ts",
+      "types": "./dist/kapcsolat/index.d.ts",
+      "default": "./dist/kapcsolat/index.js"
+    },
+    "./azonosito": {
+      "development": "./src/azonosito/index.ts",
+      "types": "./dist/azonosito/index.d.ts",
+      "default": "./dist/azonosito/index.js"
+    },
+    "./riport": {
+      "development": "./src/riport/index.ts",
+      "types": "./dist/riport/index.d.ts",
+      "default": "./dist/riport/index.js"
+    },
+    "./semak": {
+      "development": "./src/semak/index.ts",
+      "types": "./dist/semak/index.d.ts",
+      "default": "./dist/semak/index.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

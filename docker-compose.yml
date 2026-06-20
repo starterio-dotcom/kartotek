@@ -1,0 +1,23 @@
+# Fejlesztői MongoDB egy-node-os replica setként, hogy a több-dokumentumos
+# tranzakciók működjenek (lásd docs/architektura.md).
+services:
+  mongo:
+    image: mongo:7
+    container_name: kartotek-mongo
+    command: ['--replSet', 'rs0', '--bind_ip_all']
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      # A replica set első indításkori inicializálása (idempotens).
+      test: >
+        echo "try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]}) }"
+        | mongosh --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  mongo-data:

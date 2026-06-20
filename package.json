@@ -1,0 +1,34 @@
+{
+  "name": "kartotekrendszer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Követelménykövető kartotékrendszer — pnpm monorepo (web + api + shared)",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/*\" dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:e2e": "node e2e/run-e2e.mjs",
+    "test:e2e:oidc": "node e2e/run-oidc.mjs",
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write .",
+    "db:up": "docker compose up -d mongo",
+    "db:down": "docker compose down",
+    "prod:up": "docker compose -f docker-compose.prod.yml up -d --build",
+    "prod:down": "docker compose -f docker-compose.prod.yml down"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.0",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "mongodb-memory-server": "^10.1.2",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2"
+  }
+}

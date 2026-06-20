@@ -1,0 +1,60 @@
+{
+  "realm": "kartotek",
+  "enabled": true,
+  "sslRequired": "external",
+  "loginTheme": "keycloak",
+  "registrationAllowed": false,
+  "clients": [
+    {
+      "clientId": "kartotek-web",
+      "name": "Kartotékrendszer web (SPA)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "https://aru.hu/*"
+      ],
+      "webOrigins": ["+"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/*##https://aru.hu/*"
+      },
+      "defaultClientScopes": ["email", "profile", "roles", "web-origins"],
+      "fullScopeAllowed": true
+    }
+  ],
+  "users": [
+    {
+      "username": "kiss.anna",
+      "email": "kiss.anna@pelda.hu",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Anna",
+      "lastName": "Kiss",
+      "credentials": [{ "type": "password", "value": "Proba123!", "temporary": false }]
+    },
+    {
+      "username": "varga.dora",
+      "email": "varga.dora@pelda.hu",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Dóra",
+      "lastName": "Varga",
+      "credentials": [{ "type": "password", "value": "Proba123!", "temporary": false }]
+    },
+    {
+      "username": "nagy.peter",
+      "email": "nagy.peter@pelda.hu",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Péter",
+      "lastName": "Nagy",
+      "credentials": [{ "type": "password", "value": "Proba123!", "temporary": false }]
+    }
+  ]
+}
