@@ -96,6 +96,31 @@ export async function apiRoutes(appBase: FastifyInstance): Promise<void> {
     return szervezet.felhasznaloLista();
   });
 
+  app.patch(
+    '/api/felhasznalok/:id',
+    {
+      schema: {
+        tags: ['szervezet'],
+        params: z.object({ id: z.string() }),
+        body: z.object({
+          tagsagok: z
+            .array(
+              z.object({
+                alkalmazasKod: z.string().min(1),
+                szerepkor: z.enum(['Olvasó', 'Szerző', 'Jóváhagyó', 'Admin']),
+              }),
+            )
+            .optional(),
+          globalisAdmin: z.boolean().optional(),
+        }),
+      },
+    },
+    async (req) => {
+      const felh = app.bejelentkezesKell(req);
+      return szervezet.felhasznaloFrissites(req.params.id, req.body, felh);
+    },
+  );
+
   app.post(
     '/api/alkalmazasok',
     {

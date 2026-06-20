@@ -103,6 +103,15 @@ export function Elrendezes() {
         >
           ⎙ Kiadások
         </button>
+        {felhasznalo?.globalisAdmin && (
+          <button
+            className={`gomb masodlagos${location.pathname === '/felhasznalok' ? ' aktiv' : ''}`}
+            aria-current={location.pathname === '/felhasznalok' ? 'page' : undefined}
+            onClick={() => nav('/felhasznalok')}
+          >
+            ☖ Felhasználók
+          </button>
+        )}
 
         <div className="hctrl">
           {oidc ? (

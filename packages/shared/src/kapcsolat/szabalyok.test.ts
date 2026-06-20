@@ -154,3 +154,24 @@ describe('kapcsolat — lebontja ciklusellenőrzés', () => {
     expect(elerheto('C', 'A', elek)).toBe(false);
   });
 });
+
+describe('kapcsolat — fail-closed ismeretlen céltípusnál', () => {
+  it('leváltja belső elem-célnál TILTOTT, ha a céltípus ismeretlen', () => {
+    expect(kapcsolatValidacio(k({ fajta: 'leváltja', celElemId: 'B' }), ures).ervenyes).toBe(false);
+  });
+  it('leváltja azonos típusnál megengedett', () => {
+    expect(
+      kapcsolatValidacio(k({ fajta: 'leváltja', celElemId: 'B' }), { ...ures, celTipus: 'BUS' })
+        .ervenyes,
+    ).toBe(true);
+  });
+  it('hivatkozik belső elem-célnál TILTOTT ismeretlen típussal', () => {
+    expect(kapcsolatValidacio(k({ fajta: 'hivatkozik', celElemId: 'B' }), ures).ervenyes).toBe(false);
+  });
+  it('hivatkozik BD-célra megengedett', () => {
+    expect(
+      kapcsolatValidacio(k({ fajta: 'hivatkozik', celElemId: 'B' }), { ...ures, celTipus: 'BD' })
+        .ervenyes,
+    ).toBe(true);
+  });
+});

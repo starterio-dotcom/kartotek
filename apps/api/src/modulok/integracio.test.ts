@@ -451,3 +451,44 @@ describe('kiadások (Fázis 6)', () => {
     expect((ures.json().verziok as unknown[]).length).toBe(0);
   });
 });
+
+describe('felhasználó-szerepkörök kezelése (admin)', () => {
+  it('a lista a szerepköröket is visszaadja', async () => {
+    const lista = (await hiv('GET', '/api/felhasznalok', { mint: ANNA })).json() as {
+      email: string;
+      tagsagok: { alkalmazasKod: string; szerepkor: string }[];
+      globalisAdmin: boolean;
+    }[];
+    const peter = lista.find((u) => u.email === 'nagy.peter@pelda.hu');
+    expect(peter?.globalisAdmin).toBe(true);
+  });
+
+  it('globális Admin frissítheti a tagságokat, idegen 403', async () => {
+    const lista = (await hiv('GET', '/api/felhasznalok', { mint: PETER })).json() as {
+      id: string;
+      email: string;
+    }[];
+    const dora = lista.find((u) => u.email === 'varga.dora@pelda.hu')!;
+
+    // Nem globális Admin → 403.
+    expect(
+      (await hiv('PATCH', `/api/felhasznalok/${dora.id}`, {
+        mint: ANNA,
+        body: { globalisAdmin: true },
+      })).statusCode,
+    ).toBe(403);
+
+    // Globális Admin → 200, +3R Olvasó tagság.
+    const res = await hiv('PATCH', `/api/felhasznalok/${dora.id}`, {
+      mint: PETER,
+      body: {
+        tagsagok: [
+          { alkalmazasKod: 'Terminus', szerepkor: 'Szerző' },
+          { alkalmazasKod: '3R', szerepkor: 'Olvasó' },
+        ],
+      },
+    });
+    expect(res.statusCode).toBe(200);
+    expect((res.json().tagsagok as unknown[]).length).toBe(2);
+  });
+});

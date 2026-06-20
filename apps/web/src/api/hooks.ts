@@ -4,6 +4,7 @@ import type {
   Alkalmazas,
   Elem,
   ElemKapcsolatok,
+  Felhasznalo,
   HatasRiport,
   Kiadas,
   KiadasTartalom,
@@ -40,8 +41,23 @@ export function useAlkalmazasok() {
 export function useFelhasznalok() {
   return useQuery({
     queryKey: ['felhasznalok'],
-    queryFn: () => api.get<{ id: string; nev: string; email: string }[]>('/api/felhasznalok'),
+    queryFn: () => api.get<Felhasznalo[]>('/api/felhasznalok'),
     staleTime: 5 * 60_000,
+  });
+}
+
+export function useFelhasznaloFrissites() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      ...be
+    }: {
+      id: string;
+      tagsagok?: { alkalmazasKod: string; szerepkor: string }[];
+      globalisAdmin?: boolean;
+    }) => api.patch<Felhasznalo>(`/api/felhasznalok/${id}`, be),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['felhasznalok'] }),
   });
 }
 

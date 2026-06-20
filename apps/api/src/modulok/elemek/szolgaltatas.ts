@@ -40,30 +40,38 @@ export async function elemLetrehozas(
   if (uzleti && be.retegKod) throw hiba400('Üzleti típushoz nem adható meg réteg.');
   if (!uzleti && !retegKod) throw hiba400('Technikai típushoz kötelező a réteg.');
 
-  const sorszam = await kovetkezoSorszam(be.alkalmazasKod, be.tipusKod, retegKod);
-  const kulcs = formazKulcs({ alkKod: be.alkalmazasKod, retegKod, tipusKod: be.tipusKod, sorszam });
-
   const most = new Date();
-  const elem = await Elem.create({
-    kulcs,
-    tipusKod: be.tipusKod,
-    alkalmazasKod: be.alkalmazasKod,
-    retegKod,
-    cimkek: be.cimkek,
-    verziok: [
-      {
-        verzioSzam: 1,
-        statusz: 'Vázlat' as Statusz,
-        cim: be.cim,
-        leirasMd: be.leirasMd,
-        tipusMezok: be.tipusMezok,
-        letrehozva: most,
-        modositottaId: felh.id,
-        statusznaplo: [{ hova: 'Vázlat', mikor: most, ki: felh.id, indoklas: 'létrehozás' }],
-      },
-    ],
-  });
-  return elemValasz(elem.toObject());
+  // Versenyhelyzet-biztos: párhuzamos létrehozásnál ütköző kulcsra (E11000) a
+  // sorszámot újraszámolva próbálkozunk (a unique index a végső védvonal).
+  for (let proba = 0; ; proba++) {
+    const sorszam = await kovetkezoSorszam(be.alkalmazasKod, be.tipusKod, retegKod);
+    const kulcs = formazKulcs({ alkKod: be.alkalmazasKod, retegKod, tipusKod: be.tipusKod, sorszam });
+    try {
+      const elem = await Elem.create({
+        kulcs,
+        tipusKod: be.tipusKod,
+        alkalmazasKod: be.alkalmazasKod,
+        retegKod,
+        cimkek: be.cimkek,
+        verziok: [
+          {
+            verzioSzam: 1,
+            statusz: 'Vázlat' as Statusz,
+            cim: be.cim,
+            leirasMd: be.leirasMd,
+            tipusMezok: be.tipusMezok,
+            letrehozva: most,
+            modositottaId: felh.id,
+            statusznaplo: [{ hova: 'Vázlat', mikor: most, ki: felh.id, indoklas: 'létrehozás' }],
+          },
+        ],
+      });
+      return elemValasz(elem.toObject());
+    } catch (e) {
+      if ((e as { code?: number }).code === 11000 && proba < 4) continue;
+      throw e;
+    }
+  }
 }
 
 export interface ElemSzuro {

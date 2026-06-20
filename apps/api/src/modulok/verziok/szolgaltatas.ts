@@ -39,6 +39,10 @@ export async function verzioSzerkesztes(
     elem.markModified('verziok');
   }
   v.modositottaId = felh.id as never;
+  // A szerkesztő rögzítése a négy-szem-elvhez (minden tartalom-szerkesztő számít).
+  const szerk = (v as { szerkesztok?: unknown[] }).szerkesztok ?? ((v as { szerkesztok: unknown[] }).szerkesztok = []);
+  if (!szerk.some((s) => String(s) === felh.id)) szerk.push(felh.id);
+  elem.markModified('verziok');
   await elem.save();
   return elemValasz(elem.toObject());
 }

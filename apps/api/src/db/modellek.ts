@@ -78,6 +78,8 @@ const VerzioSchema = new Schema(
     kiadasIds: [{ type: Schema.Types.ObjectId, ref: 'Kiadas' }],
     letrehozva: { type: Date, required: true, default: Date.now },
     modositottaId: { type: Schema.Types.ObjectId, ref: 'Felhasznalo', required: true },
+    // Minden tartalom-szerkesztő (négy-szem-elv: a több-szerzős vázlat kizárása).
+    szerkesztok: { type: [{ type: Schema.Types.ObjectId, ref: 'Felhasznalo' }], default: [] },
     statusznaplo: { type: [StatusznaploSchema], default: [] },
     mellekletek: { type: [MellekletSchema], default: [] },
     megjegyzesek: { type: [MegjegyzesSchema], default: [] },

@@ -2,6 +2,7 @@ import { Alkalmazas, Szolgaltatas, Felhasznalo } from '../../db/modellek.js';
 import { hiba404 } from '../../hibak.js';
 import { ellenoriz } from '../../auth/rbac.js';
 import { globalisAdminKell, type AktualisFelhasznalo } from '../../auth/plugin.js';
+import { ervenyesId } from '../kozos.js';
 
 const valasz = ({ _id, __v, ...rest }: Record<string, unknown>) => ({ id: String(_id), ...rest });
 
@@ -9,10 +10,32 @@ export async function szolgaltatasLista(): Promise<Record<string, unknown>[]> {
   return (await Szolgaltatas.find().sort({ kod: 1 }).lean()).map(valasz);
 }
 
-/** Felhasználók megjelenítési adatai (név-feloldáshoz: megjegyzések, napló). */
-export async function felhasznaloLista(): Promise<{ id: string; nev: string; email: string }[]> {
-  const docs = await Felhasznalo.find().select('nev email').lean();
-  return docs.map((f) => ({ id: String(f._id), nev: f.nev, email: f.email }));
+/** Felhasználók megjelenítési + szerepkör-adatai (név-feloldáshoz és az admin-kezeléshez). */
+export async function felhasznaloLista(): Promise<Record<string, unknown>[]> {
+  const docs = await Felhasznalo.find().select('nev email tagsagok globalisAdmin').sort({ nev: 1 }).lean();
+  return docs.map((f) => ({
+    id: String(f._id),
+    nev: f.nev,
+    email: f.email,
+    tagsagok: (f.tagsagok ?? []).map((t) => ({ alkalmazasKod: t.alkalmazasKod, szerepkor: t.szerepkor })),
+    globalisAdmin: f.globalisAdmin ?? false,
+  }));
+}
+
+/** Felhasználó szerepköreinek (tagságok / globális Admin) frissítése — csak globális Admin. */
+export async function felhasznaloFrissites(
+  id: string,
+  be: { tagsagok?: { alkalmazasKod: string; szerepkor: string }[]; globalisAdmin?: boolean },
+  felh: AktualisFelhasznalo,
+): Promise<Record<string, unknown>> {
+  globalisAdminKell(felh);
+  if (!ervenyesId(id)) throw hiba404('Felhasználó nem található.');
+  const doc = await Felhasznalo.findById(id);
+  if (!doc) throw hiba404('Felhasználó nem található.');
+  if (be.tagsagok !== undefined) doc.tagsagok = be.tagsagok as never;
+  if (be.globalisAdmin !== undefined) doc.globalisAdmin = be.globalisAdmin;
+  await doc.save();
+  return valasz(doc.toObject());
 }
 
 export async function szolgaltatasLetrehozas(

@@ -13,13 +13,21 @@ interface VerzioSzeru {
   verzioSzam: number;
   statusz: string;
   modositottaId?: unknown;
+  szerkesztok?: unknown[];
   statusznaplo?: { ki: string }[];
 }
 
-/** A verzió szerzői/szerkesztői a négy-szem-elvhez: a módosító + a napló nem-RENDSZER szereplői. */
+/**
+ * A verzió szerzői/szerkesztői a négy-szem-elvhez: MINDEN tartalom-szerkesztő
+ * (`szerkesztok` — minden szerkesztés rögzíti, így a több-szerzős vázlat sem
+ * játszható ki), a legutóbbi módosító, és a napló nem-RENDSZER szereplői.
+ * A puszta véleményező/megjegyző NEM számít szerkesztőnek — a Jóváhagyó dolga
+ * épp a véleményezés, őt nem zárjuk ki a jóváhagyásból.
+ */
 export function szerkesztoIds(verzio: VerzioSzeru): string[] {
   const halmaz = new Set<string>();
   if (verzio.modositottaId != null) halmaz.add(String(verzio.modositottaId));
+  for (const sz of verzio.szerkesztok ?? []) if (sz != null) halmaz.add(String(sz));
   for (const n of verzio.statusznaplo ?? []) {
     if (n.ki && n.ki !== 'RENDSZER') halmaz.add(n.ki);
   }

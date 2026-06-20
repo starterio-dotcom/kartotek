@@ -102,18 +102,18 @@ export function kapcsolatValidacio(k: UjKapcsolat, ctx: KapcsolatCtx): Validacio
   }
 
   // 3a) `hivatkozik` belső elem-célja csak BD vagy TD lehet.
+  // Fail-closed: ismeretlen céltípusnál (belső elem-cél) inkább tiltunk.
   if (
     k.fajta === 'hivatkozik' &&
     cf === 'elem' &&
-    ctx.celTipus &&
-    !['BD', 'TD'].includes(ctx.celTipus)
+    (!ctx.celTipus || !['BD', 'TD'].includes(ctx.celTipus))
   )
     hibak.push(
       'A „hivatkozik” belső célja csak BD vagy TD lehet (egyébként használj külső linket).',
     );
 
-  // 3b) `leváltja` csak azonos típusú elemek között.
-  if (k.fajta === 'leváltja' && cf === 'elem' && ctx.celTipus && ctx.celTipus !== ctx.forrasTipus)
+  // 3b) `leváltja` csak azonos típusú elemek között. Fail-closed ismeretlen céltípusnál.
+  if (k.fajta === 'leváltja' && cf === 'elem' && (!ctx.celTipus || ctx.celTipus !== ctx.forrasTipus))
     hibak.push('A „leváltja” csak azonos típusú elemek között megengedett.');
 
   // 4) Duplikátum-tiltás (azonos forrás–cél–fajta).

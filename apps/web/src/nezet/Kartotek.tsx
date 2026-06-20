@@ -247,8 +247,8 @@ export function Kartotek() {
             </div>
           </div>
 
-          <div className="blokk">
-            <div className="blokk-cim">Napló</div>
+          <details className="blokk osszecsuk" open>
+            <summary className="blokk-cim">Napló</summary>
             <div className="ido-lista">
               {[...ver.statusznaplo].reverse().map((n, i) => (
                 <div className="ido-sor" key={i}>
@@ -268,7 +268,7 @@ export function Kartotek() {
                 </div>
               ))}
             </div>
-          </div>
+          </details>
 
           <VeszelyZona elem={elem} felhasznalo={felhasznalo} />
         </div>
