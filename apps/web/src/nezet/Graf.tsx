@@ -144,12 +144,30 @@ export function Graf() {
                     strokeWidth={kijelolt === n.id ? 2 : 1}
                   />
                   <text x="13" y="22" fontSize="13" fontWeight="700" fill="#16191F">
-                    {n.cimke.length > 20 ? n.cimke.slice(0, 19) + '…' : n.cimke}
+                    {(() => {
+                      const max = n.tipus === 'elem' ? 16 : 20;
+                      return n.cimke.length > max ? n.cimke.slice(0, max - 1) + '…' : n.cimke;
+                    })()}
                   </text>
                   {n.statusz && (
                     <text x="13" y="40" fontSize="11" fill="#5F6B7D">
                       {n.statusz}
                     </text>
+                  )}
+                  {n.tipus === 'elem' && (
+                    <g
+                      className="graf-cs-ikon"
+                      transform={`translate(${NODE_W - 25}, 6)`}
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        setKijelolt(n.id);
+                      }}
+                    >
+                      <title>Kijelölés — kapcsolatszerkesztés és „környezete"</title>
+                      <rect width="20" height="18" rx="5" fill="#EEF2FF" stroke="#D3D9E3" />
+                      <circle cx="10" cy="9" r="4.3" fill="none" stroke="#4258ED" strokeWidth="1.6" />
+                      <circle cx="10" cy="9" r="1.3" fill="#4258ED" />
+                    </g>
                   )}
                 </g>
               ))}
