@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { KAPCSOLAT_FAJTAK, type KapcsolatFajta } from '@kartotek/shared';
 import { useGraf } from '../api/hooks';
@@ -9,6 +9,7 @@ import { elrendez, kornyezet, EL_STILUS, NODE_W, NODE_H, type PozCsomopont } fro
 
 export function Graf() {
   const [params] = useSearchParams();
+  const nav = useNavigate();
   const alk = params.get('alk') ?? '';
   const qc = useQueryClient();
   const { data: graf, isLoading, isError, error } = useGraf(alk);
@@ -18,6 +19,7 @@ export function Graf() {
   const [csakKornyezet, setCsakKornyezet] = useState(false);
   const [nezet, setNezet] = useState({ scale: 1, tx: 0, ty: 0 });
   const huzas = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
+  const mozgott = useRef(false); // pan közben ne navigáljon a csomópont-kattintás
 
   const elrendezes = useMemo(() => (graf ? elrendez(graf) : null), [graf]);
   const pozMap = useMemo(() => {
@@ -51,14 +53,24 @@ export function Graf() {
   };
   const onDown = (e: React.MouseEvent) => {
     huzas.current = { x: e.clientX, y: e.clientY, tx: nezet.tx, ty: nezet.ty };
+    mozgott.current = false;
   };
   const onMove = (e: React.MouseEvent) => {
     if (!huzas.current) return;
+    if (Math.abs(e.clientX - huzas.current.x) + Math.abs(e.clientY - huzas.current.y) > 4)
+      mozgott.current = true;
     setNezet((n) => ({
       ...n,
       tx: huzas.current!.tx + (e.clientX - huzas.current!.x),
       ty: huzas.current!.ty + (e.clientY - huzas.current!.y),
     }));
+  };
+
+  // Csomópont-kattintás: elemnél nyíljon meg a kartoték; szabályzatnál (nincs kartoték) kijelölés.
+  const csomopontKlikk = (n: PozCsomopont) => {
+    if (mozgott.current) return; // ez pan volt, nem kattintás
+    if (n.tipus === 'szabalyzat') setKijelolt(n.id);
+    else nav(`/elem/${n.id}${alk ? `?alk=${alk}` : ''}`);
   };
   const onUp = () => (huzas.current = null);
 
@@ -121,7 +133,7 @@ export function Graf() {
                   key={n.id}
                   className={`graf-cs${kijelolt === n.id ? ' kijelolt' : ''}`}
                   transform={`translate(${n.x},${n.y})`}
-                  onClick={() => setKijelolt(n.id)}
+                  onClick={() => csomopontKlikk(n)}
                 >
                   <rect
                     width={NODE_W}
