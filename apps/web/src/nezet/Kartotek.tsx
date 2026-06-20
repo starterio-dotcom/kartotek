@@ -14,6 +14,7 @@ import { Mellekletek } from './Mellekletek';
 import { CimkeSzerk } from './CimkeSzerk';
 import { KapcsolatSzerk } from './KapcsolatSzerk';
 import { HatasPanel, KiadasPanel, VeszelyZona } from './KartotekFazis6';
+import { VerzioDiff } from '../komponens/VerzioDiff';
 import type { Verzio } from '../api/tipusok';
 
 const TIPUS_NEV: Record<TipusKod, string> = {
@@ -50,6 +51,7 @@ export function Kartotek() {
   }, [felhasznalok]);
   const [valasztottV, setValasztottV] = useState<number | null>(null);
   const [szerkeszt, setSzerkeszt] = useState(false);
+  const [osszevetV, setOsszevetV] = useState<number | null>(null);
 
   if (isLoading) return <Betolto />;
   if (isError) return <main><Hiba uzenet={(error as Error).message} /></main>;
@@ -57,6 +59,12 @@ export function Kartotek() {
 
   const verziok = [...elem.verziok].sort((a, b) => b.verzioSzam - a.verzioSzam);
   const ver: Verzio = verziok.find((v) => v.verzioSzam === valasztottV) ?? verziok[0]!;
+  // Verzió-összehasonlítás: a kiválasztott `ver` és egy másik verzió (régi → új sorrendben).
+  const osszevetMasik = osszevetV != null ? verziok.find((v) => v.verzioSzam === osszevetV) : null;
+  const [diffRegi, diffUj] =
+    osszevetMasik && osszevetMasik.verzioSzam < ver.verzioSzam
+      ? [osszevetMasik, ver]
+      : [ver, osszevetMasik ?? ver];
   const tipusKod = elem.tipusKod;
   const dokumentum = tipusKod === 'BD' || tipusKod === 'TD';
   const uzleti = uzletiTipus(tipusKod);
@@ -109,6 +117,17 @@ export function Kartotek() {
             <div className="blokk szerk-blokk">
               <Szerkeszto elem={elem} verzio={ver} onKesz={() => setSzerkeszt(false)} />
             </div>
+          ) : osszevetMasik ? (
+            <>
+              <button
+                className="gomb masodlagos kicsi"
+                style={{ marginBottom: 12 }}
+                onClick={() => setOsszevetV(null)}
+              >
+                ✕ Vissza a tartalomhoz
+              </button>
+              <VerzioDiff regi={diffRegi} uj={diffUj} />
+            </>
           ) : (
             <>
               <div className="blokk">
@@ -189,6 +208,7 @@ export function Kartotek() {
                   onClick={() => {
                     setValasztottV(v.verzioSzam);
                     setSzerkeszt(false);
+                    setOsszevetV(null);
                   }}
                 >
                   <span className="vszam">v{v.verzioSzam}</span>
@@ -197,6 +217,24 @@ export function Kartotek() {
                 </button>
               ))}
             </div>
+            {verziok.length > 1 && (
+              <label className="osszevet-valaszto">
+                <span>Összevetés a v{ver.verzioSzam}-vel:</span>
+                <select
+                  value={osszevetV ?? ''}
+                  onChange={(e) => setOsszevetV(e.target.value ? Number(e.target.value) : null)}
+                >
+                  <option value="">—</option>
+                  {verziok
+                    .filter((v) => v.verzioSzam !== ver.verzioSzam)
+                    .map((v) => (
+                      <option key={v.verzioSzam} value={v.verzioSzam}>
+                        v{v.verzioSzam} ({v.statusz})
+                      </option>
+                    ))}
+                </select>
+              </label>
+            )}
           </div>
 
           <div className="blokk">

@@ -614,3 +614,26 @@
   details.osszecsuk > summary::-webkit-details-marker{display:none}
   details.osszecsuk > summary::after{content:'▾';color:var(--t-leges);font-size:12px;transition:transform .15s}
   details.osszecsuk[open] > summary::after{transform:rotate(180deg)}
+
+  /* ===== Verzió-diff ===== */
+  .osszevet-valaszto{display:flex;align-items:center;gap:7px;margin-top:10px;font-size:12px;color:var(--t-halk)}
+  .osszevet-valaszto select{font-size:12px;padding:3px 6px}
+  .diff-mezo{margin:0 0 16px}
+  .diff-cim{font-size:12px;font-weight:700;color:var(--t-halk);text-transform:uppercase;letter-spacing:.03em;margin:0 0 6px}
+  .diff-blokk{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.55;background:var(--felulet-2);
+    border:1px solid var(--keret);border-radius:var(--r-m);padding:8px 4px;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+  .diff-blokk > div{padding:0 8px}
+  .diff-jel{display:inline-block;width:1.2em;color:var(--t-leges);user-select:none}
+  .diff-add{background:#E6F4EA;color:#0B6B2E}
+  .diff-del{background:#FDEDEA;color:#B0210F}
+  .diff-add-jel{color:#0B6B2E;font-weight:700}
+  .diff-del-jel{color:#B0210F;font-weight:700}
+
+  /* ===== Mentett szűrők + tömeges műveletek ===== */
+  .mentett-szurok-sor{display:flex;align-items:center;gap:6px;margin:0 0 10px;flex-wrap:wrap}
+  .mentett-szurok-sor select{font-size:12px;padding:3px 6px;max-width:140px}
+  .le-pipa{margin-right:7px;vertical-align:middle}
+  .lista-elem.bejelolt{border-color:var(--brand);background:var(--brand-tint)}
+  .tomeges-sav{position:sticky;bottom:0;display:flex;align-items:center;gap:10px;padding:10px 14px;
+    background:#fff;border-top:1px solid var(--keret-eros);box-shadow:0 -2px 8px rgba(0,0,0,.05)}
+  .tomeges-db{font-size:13px;font-weight:600;color:var(--t-eros);flex:1}
