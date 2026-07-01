@@ -1,0 +1,27 @@
+# .pm/status.yml — kézzel vezetett élő fókusz modulonként
+updated: 2026-06-20
+modules:
+  - module: graf
+    name: Kapcsolati gráf
+    status: active
+    phase: K5
+    current: kijelölő ikon a csomópontokon (megnyitás + szerkesztés együtt)
+    next: gráf-szűrők a kapcsolat-típusokra
+    branch: main
+    tests: 0
+  - module: web
+    name: Web frontend
+    status: review
+    phase: K4
+    current: verzió-diff + mentett szűrők + tömeges műveletek + a11y-audit
+    next: azonos-origin prod API véglegesítés
+    branch: main
+    tests: 0
+  - module: biztonsag
+    name: Törlés-őrök, biztonság, üzemeltetés
+    status: review
+    phase: K7
+    current: négy-szem-elv, fail-closed, CSP, szerepkör-UI review-javítások
+    next: monitoring + mentés-visszaállítás gyakorlat
+    branch: main
+    tests: 0
