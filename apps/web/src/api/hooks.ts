@@ -30,8 +30,12 @@ function querystring(szuro: ElemSzuro): string {
   return s ? `?${s}` : '';
 }
 
-export function useSzolgaltatasok() {
-  return useQuery({ queryKey: ['szolgaltatasok'], queryFn: () => api.get<Szolgaltatas[]>('/api/szolgaltatasok') });
+export function useSzolgaltatasok(opts: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: ['szolgaltatasok'],
+    queryFn: () => api.get<Szolgaltatas[]>('/api/szolgaltatasok'),
+    enabled: opts.enabled ?? true,
+  });
 }
 
 export function useAlkalmazasok() {

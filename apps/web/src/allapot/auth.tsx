@@ -68,6 +68,7 @@ let callbackFut = false;
 
 /** Valódi OIDC/SSO (Authorization Code + PKCE); a token Bearer-ként megy az API-nak. */
 function OidcAuth({ children }: { children: ReactNode }) {
+  const qc = useQueryClient();
   const [kesz, setKesz] = useState(false);
   const [token, setToken] = useState<string | null>(null);
 
@@ -77,6 +78,9 @@ function OidcAuth({ children }: { children: ReactNode }) {
       const t = u && !u.expired ? u.access_token : null;
       aktualisTokenBeallit(t);
       setToken(t);
+      // Friss token birtokában a 401-gyel elhasalt lekérdezések újra próbálhatók
+      // (pl. csendes megújítás után; refetchOnWindowFocus nélkül magától nem gyógyulna).
+      if (t) void qc.invalidateQueries({ predicate: (q) => q.state.status === 'error' });
     };
 
     void (async () => {
@@ -104,7 +108,7 @@ function OidcAuth({ children }: { children: ReactNode }) {
       mgr.events.removeUserLoaded(onLoaded);
       mgr.events.removeUserUnloaded(onUnloaded);
     };
-  }, []);
+  }, [qc]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['auth', 'en', token],
@@ -127,7 +131,9 @@ function OidcAuth({ children }: { children: ReactNode }) {
         },
       }}
     >
-      {children}
+      {/* A tárolt token betöltéséig nem mountolunk tartalmat — így egyetlen
+          lekérdezés sem indulhat el token nélkül (401-villanás). */}
+      {kesz ? children : null}
     </Ctx.Provider>
   );
 }

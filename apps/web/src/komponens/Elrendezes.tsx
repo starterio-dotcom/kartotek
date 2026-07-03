@@ -13,8 +13,9 @@ function maStr() {
 }
 
 export function Elrendezes() {
-  const { felhasznalo, emailBeallit, oidc, login, logout } = useAuth();
-  const { data: szolgaltatasok } = useSzolgaltatasok();
+  const { felhasznalo, betolt, emailBeallit, oidc, login, logout } = useAuth();
+  // Kijelentkezve nem kérdezünk le — token nélkül csak 401 lenne belőle.
+  const { data: szolgaltatasok } = useSzolgaltatasok({ enabled: !!felhasznalo });
   const [params, setParams] = useSearchParams();
   const nav = useNavigate();
   const location = useLocation();
@@ -120,7 +121,7 @@ export function Elrendezes() {
                 <span className="felh-nev" title={felhasznalo.email}>{felhasznalo.nev}</span>
                 <button className="gomb masodlagos" onClick={logout}>Kilépés</button>
               </>
-            ) : (
+            ) : betolt ? null : (
               <button className="gomb elsodleges" onClick={login}>Bejelentkezés</button>
             )
           ) : (
@@ -146,7 +147,14 @@ export function Elrendezes() {
         )}
       </header>
 
-      {!felhasznalo ? (
+      {!felhasznalo && betolt ? (
+        // Auth-állapot feloldása folyamatban — ne a login-modul villanjon.
+        <main id="fo-tartalom" aria-busy="true">
+          <div className="ures-allapot">
+            <p>Betöltés…</p>
+          </div>
+        </main>
+      ) : !felhasznalo ? (
         <main id="fo-tartalom">
           <div className="ures-allapot">
             <h2>Üdvözlünk a Kartotékrendszerben</h2>
