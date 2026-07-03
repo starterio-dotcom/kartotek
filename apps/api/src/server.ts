@@ -27,9 +27,21 @@ async function fo(): Promise<void> {
   // A kapcsolat hiánya nem dönti le az API-t — a /health jelzi az állapotot.
   await app.listen({ port: config.port, host: '0.0.0.0' });
 
-  csatlakozasDb()
-    .then(() => app.log.info('MongoDB kapcsolat él'))
-    .catch((e) => app.log.warn({ err: e }, 'MongoDB nem elérhető — az API DB nélkül fut'));
+  // Újrapróbálkozás, amíg a DB elérhetővé nem válik — az API nem függhet attól,
+  // hogy a mongod előbb indult-e el (együttes restart/boot). A sikeres első
+  // csatlakozás után a driver már magától kezeli a kapcsolat-kieséseket.
+  void (async () => {
+    for (let kiserlet = 1; ; kiserlet++) {
+      try {
+        await csatlakozasDb();
+        app.log.info('MongoDB kapcsolat él');
+        return;
+      } catch (e) {
+        app.log.warn({ err: e, kiserlet }, 'MongoDB nem elérhető — újrapróbálkozás 5 mp múlva');
+        await new Promise((r) => setTimeout(r, 5000));
+      }
+    }
+  })();
 }
 
 fo().catch((e) => {
