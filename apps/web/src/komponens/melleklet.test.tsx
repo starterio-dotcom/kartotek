@@ -45,4 +45,21 @@ describe('Markdown melleklet:ID beágyazás', () => {
     );
     expect(screen.getByText(/melléklet:/)).toBeInTheDocument();
   });
+
+  it('vanTartalom=false esetén nem indul letöltés, jelölést mutat', () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    render(
+      <Markdown
+        szoveg={'![Vázlat](melleklet:M2)'}
+        melleklet={{
+          elemId: 'e1',
+          verzioSzam: 1,
+          mellekletek: [{ ...kepMelleklet, vanTartalom: false }],
+        }}
+      />,
+    );
+    expect(screen.getByText(/melléklet:/)).toBeInTheDocument();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 });

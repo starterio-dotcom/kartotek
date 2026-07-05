@@ -119,6 +119,29 @@ describe('mellékletek', () => {
     expect(res.json().verziok[0].mellekletek[0].tipus).toBe('figma');
   });
 
+  it('vanTartalom: feltöltöttnél igaz, csak-link Figmánál és seed-hivatkozásnál hamis', async () => {
+    const id = await ujVazlat();
+    const fel = await feltolt(`/api/elemek/${id}/verziok/1/mellekletek`, ANNA, PNG, 'kep.png', 'image/png');
+    expect(fel.json().verziok[0].mellekletek[0].vanTartalom).toBe(true);
+
+    const linkes = await hiv('POST', `/api/elemek/${id}/verziok/1/mellekletek/figma`, ANNA, {
+      alt: 'Élő terv',
+      figmaLink: 'https://www.figma.com/design/X/Y?node-id=12%3A34',
+    });
+    const mk = linkes.json().verziok[0].mellekletek as { vanTartalom?: boolean }[];
+    expect(mk[mk.length - 1]!.vanTartalom).toBe(false);
+
+    // A seed-elem mellékletei mögött nincs tárolt fájl (seed:// hivatkozás).
+    const lista = await hiv('GET', '/api/elemek?alkalmazasKod=3R', ANNA);
+    const busz = (
+      lista.json() as { kulcs: string; verziok: { mellekletek: { vanTartalom?: boolean }[] }[] }[]
+    ).find((e) => e.kulcs === '3R-BUS-002');
+    expect(busz).toBeDefined();
+    const seedMell = busz!.verziok.flatMap((v) => v.mellekletek);
+    expect(seedMell.length).toBeGreaterThan(0);
+    for (const m of seedMell) expect(m.vanTartalom).toBe(false);
+  });
+
   it('Hatályossá vált verzióra nem tölthető fel (befagyott) és fagyasztva beáll', async () => {
     const id = await ujVazlat();
     await hiv('POST', `/api/elemek/${id}/verziok/1/bekuldes`, ANNA);

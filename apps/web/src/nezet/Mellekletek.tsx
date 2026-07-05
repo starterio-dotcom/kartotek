@@ -57,7 +57,9 @@ export function Mellekletek({ elem, verzio }: { elem: Elem; verzio: Verzio }) {
               {m.tipus}
               {m.tipus === 'figma' && !m.figmaPng ? ' · csak élő link' : ''}
             </div>
-            {m.tipus === 'csv' && <CsvElonezet elemId={elem.id} v={verzio.verzioSzam} mid={m.mid} />}
+            {m.tipus === 'csv' && (
+              <CsvElonezet elemId={elem.id} v={verzio.verzioSzam} mid={m.mid} vanTartalom={m.vanTartalom} />
+            )}
           </div>
           {m.figmaLink && (
             <a className="mell-link" href={m.figmaLink} target="_blank" rel="noreferrer" title="Megnyitás Figmában">
@@ -117,7 +119,7 @@ function MellBelyeg({ elemId, v, m }: { elemId: string; v: number; m: Melleklet 
   if (m.tipus === 'figma' && !m.figmaPng) return <span className="mell-ikon mell-ikon-figma">F</span>;
   return (
     <span className="mell-belyeg">
-      <MellekletKep elemId={elemId} v={v} mid={m.mid} alt={m.alt} />
+      <MellekletKep elemId={elemId} v={v} mid={m.mid} alt={m.alt} vanTartalom={m.vanTartalom} />
     </span>
   );
 }

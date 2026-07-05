@@ -32,6 +32,9 @@ export const MellekletSchema = z.object({
   mime: z.string().optional(),
   figmaPng: z.string().optional(),
   figmaLink: z.string().optional(),
+  // Az API válaszában származtatott jelző: a tartalom-végpont ki tudja-e
+  // szolgálni a fájlt (seed:// és csak-link Figma mögött nincs tárolt bájt).
+  vanTartalom: z.boolean().optional(),
 });
 
 export const MegjegyzesSchema = z.object({

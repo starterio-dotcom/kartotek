@@ -32,7 +32,12 @@ export function Markdown({
           if (typeof src === 'string' && src.startsWith('melleklet:')) {
             const mid = src.slice('melleklet:'.length);
             const m = melleklet?.mellekletek.find((x) => x.mid === mid);
-            if (melleklet && m && (m.tipus === 'kep' || m.tipus === 'figma')) {
+            if (
+              melleklet &&
+              m &&
+              (m.tipus === 'kep' || m.tipus === 'figma') &&
+              m.vanTartalom !== false
+            ) {
               return (
                 <span className="mell-kep">
                   <MellekletKep
@@ -40,6 +45,7 @@ export function Markdown({
                     v={melleklet.verzioSzam}
                     mid={m.mid}
                     alt={alt || m.alt}
+                    vanTartalom={m.vanTartalom}
                   />
                 </span>
               );

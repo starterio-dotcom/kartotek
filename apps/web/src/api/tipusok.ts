@@ -16,6 +16,8 @@ export interface Melleklet {
   mime?: string;
   figmaPng?: string;
   figmaLink?: string;
+  /** Az API-tól: a tartalom-végpont ki tudja-e szolgálni a fájlt. */
+  vanTartalom?: boolean;
 }
 
 export interface Megjegyzes {
