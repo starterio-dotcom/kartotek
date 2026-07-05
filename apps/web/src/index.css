@@ -640,3 +640,102 @@
 
   .graf-cs-ikon{cursor:pointer}
   .graf-cs-ikon:hover rect{fill:#E3EAFF;stroke:#4258ED}
+
+  /* ===== Dosszié (egybeolvasható specifikáció) ===== */
+  .dosszie{max-width:1160px;margin:0 auto;padding:24px 28px 60px}
+  .d-fej{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;
+    padding-bottom:16px;border-bottom:2px solid var(--keret-eros)}
+  .d-szolg-cimke{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--brand)}
+  .d-fej-cim{font-size:24px;font-weight:700;letter-spacing:-.02em;color:var(--t-eros);margin:4px 0 0}
+  .d-fej-leiras{font-size:13.5px;color:var(--t-halk);margin:5px 0 0;max-width:60ch}
+  .d-fej-akciok{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .d-mod-valto{display:flex;background:var(--felulet-2);border-radius:var(--r-m);padding:3px;gap:2px}
+  .d-mod-valto button{border:none;background:transparent;border-radius:8px;padding:6px 12px;
+    font-size:12.5px;font-weight:600;color:var(--t-halk);transition:all .15s}
+  .d-mod-valto button.aktiv{background:#fff;color:var(--t-eros);box-shadow:var(--arnyek-s)}
+
+  .d-osszegzo{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin:18px 0 6px;
+    padding:14px 16px;background:var(--felulet);border:1px solid var(--keret);border-radius:var(--r-l)}
+  .d-stat{display:flex;flex-direction:column;line-height:1.2}
+  .d-stat b{font-size:20px;color:var(--t-eros);letter-spacing:-.02em}
+  .d-stat span{font-size:11px;font-weight:600;color:var(--t-halk)}
+  .d-stat-fig b{color:var(--figyelem)}
+  .d-erettseg{flex:1;min-width:200px;display:flex;flex-direction:column;gap:7px}
+  .d-erettseg-sav{display:flex;height:9px;border-radius:5px;overflow:hidden;background:var(--felulet-2)}
+  .d-sav-szel{min-width:3px}
+  .d-sav-szel.b-Vázlat{background:var(--t-leges)}
+  .d-sav-szel.b-Véleményezés{background:var(--figyelem-keret)}
+  .d-sav-szel.b-Jóváhagyott{background:var(--info)}
+  .d-sav-szel.b-Hatályos{background:var(--pozitiv)}
+  .d-sav-szel.b-Elavult{background:#9AA1AD}
+  .d-sav-szel.b-Archivált{background:var(--lezart)}
+  .d-sav-szel.b-Elvetve{background:var(--negativ)}
+  .d-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:var(--t-halk);font-weight:500}
+  .d-legend-tetel{display:inline-flex;align-items:center;gap:5px}
+  .d-pont{width:9px;height:9px;border-radius:2px;display:inline-block}
+  .d-pont.b-Vázlat{background:var(--t-leges)}
+  .d-pont.b-Véleményezés{background:var(--figyelem-keret)}
+  .d-pont.b-Jóváhagyott{background:var(--info)}
+  .d-pont.b-Hatályos{background:var(--pozitiv)}
+  .d-pont.b-Elavult{background:#9AA1AD}
+  .d-pont.b-Archivált{background:var(--lezart)}
+  .d-pont.b-Elvetve{background:var(--negativ)}
+
+  /* Elrendezés: TOC + dokumentum */
+  .d-wrap{display:grid;grid-template-columns:248px minmax(0,1fr);gap:30px;margin-top:24px;align-items:start}
+  @media(max-width:980px){.d-wrap{grid-template-columns:1fr}.d-toc{display:none}}
+  .d-fo{max-width:800px;min-width:0}
+
+  /* Tartalomjegyzék */
+  .d-toc{position:sticky;top:14px;align-self:start;max-height:calc(100vh - 90px);overflow-y:auto;
+    border:1px solid var(--keret);border-radius:var(--r-l);background:var(--felulet);padding:12px 8px 14px}
+  .d-toc-cim{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--t-leges);padding:2px 8px 8px}
+  .d-toc-lista{display:flex;flex-direction:column;gap:1px}
+  .d-toc-sor{display:flex;align-items:center;gap:2px}
+  .d-toc-csuk{border:none;background:none;color:var(--t-leges);font-size:11px;width:16px;
+    height:22px;flex:none;border-radius:4px;line-height:1}
+  .d-toc-csuk:hover{background:var(--felulet-2);color:var(--t-alap)}
+  .d-toc-csuk-ures{width:16px;flex:none}
+  .d-toc-link{flex:1;min-width:0;display:flex;align-items:center;gap:6px;border:none;background:none;
+    text-align:left;padding:4px 6px;border-radius:var(--r-s);font-size:12px;color:var(--t-alap)}
+  .d-toc-link:hover{background:var(--brand-tint);color:var(--brand-melyebb)}
+  .d-toc-kulcs{font-family:var(--mono);font-size:10.5px;color:var(--t-halk);flex:none}
+  .d-toc-cim2{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+
+  .d-test{margin-top:24px}
+  .d-szakasz{padding:18px 0 22px;border-top:1px solid var(--keret)}
+  .d-szakasz:first-child{border-top:none}
+  .d-tobbszulo{font-size:10.5px;font-weight:700;color:var(--info);background:var(--info-bg);
+    border-radius:var(--r-s);padding:1px 7px}
+  .d-tobbszulo-sor{font-size:11.5px;color:var(--info);margin-top:4px;font-weight:500}
+  .d-szakasz-fej{display:flex;align-items:center;gap:9px}
+  .d-kulcs{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--t-halk);letter-spacing:.02em}
+  .d-vszam{font-family:var(--mono);font-size:11px;color:var(--t-leges)}
+  .d-link{color:var(--brand);text-decoration:none;font-size:14px;font-weight:700;margin-left:auto}
+  .d-link:hover{color:var(--brand-melyebb)}
+  .d-cim{font-size:17px;font-weight:700;color:var(--t-eros);letter-spacing:-.01em;margin:7px 0 2px}
+  .d-altipus{font-size:12px;color:var(--t-halk);font-weight:500}
+  .d-rovid{font-size:14px;color:var(--t-alap);margin:10px 0 0;font-weight:500}
+  .d-tartalom{margin-top:10px;font-size:14px}
+  .d-ketted{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:12px}
+  @media(max-width:640px){.d-ketted{grid-template-columns:1fr}}
+  .d-mezo-cim{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--t-leges);margin-bottom:5px}
+  .d-cia{margin-top:12px;max-width:360px}
+  .d-labjegyzet{margin-top:30px;padding-top:14px;border-top:1px solid var(--keret);
+    font-size:12px;color:var(--t-leges);line-height:1.6}
+  .d-ures{margin:60px auto;max-width:420px;text-align:center;color:var(--t-halk);font-size:14px}
+
+  /* ===== Nyomtatás / PDF ===== */
+  @media print{
+    header,aside,.no-print,.d-link{display:none !important}
+    .layout{display:block !important;height:auto !important}
+    main{overflow:visible !important}
+    body{background:#fff}
+    .dosszie{max-width:none;padding:0}
+    .d-wrap{display:block !important}
+    .d-fo{max-width:none}
+    .d-szakasz{break-inside:avoid}
+    .d-osszegzo{break-inside:avoid}
+  }

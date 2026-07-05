@@ -91,6 +91,13 @@ export function Elrendezes() {
           ◍ Gráf
         </button>
         <button
+          className={`gomb masodlagos${location.pathname === '/dosszie' ? ' aktiv' : ''}`}
+          aria-current={location.pathname === '/dosszie' ? 'page' : undefined}
+          onClick={() => nav(`/dosszie?${alk ? `alk=${alk}` : ''}`)}
+        >
+          ▦ Dosszié
+        </button>
+        <button
           className={`gomb masodlagos${location.pathname === '/riportok' ? ' aktiv' : ''}`}
           aria-current={location.pathname === '/riportok' ? 'page' : undefined}
           onClick={() => nav(`/riportok?${alk ? `alk=${alk}` : ''}`)}

@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { Elrendezes } from './komponens/Elrendezes';
 import { Attekintes } from './nezet/Attekintes';
 import { Kartotek } from './nezet/Kartotek';
+import { Dosszie } from './nezet/Dosszie';
 import { Riportok } from './nezet/Riportok';
 import { Kiadasok } from './nezet/Kiadasok';
 import { Felhasznalok } from './nezet/Felhasznalok';
@@ -12,6 +13,7 @@ export function App() {
       <Route element={<Elrendezes />}>
         <Route index element={<Attekintes />} />
         <Route path="elem/:id" element={<Kartotek />} />
+        <Route path="dosszie" element={<Dosszie />} />
         <Route path="riportok" element={<Riportok />} />
         <Route path="kiadasok" element={<Kiadasok />} />
         <Route path="felhasznalok" element={<Felhasznalok />} />

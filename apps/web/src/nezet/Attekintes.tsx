@@ -104,6 +104,12 @@ export function Attekintes() {
                     <span>Elemek megnyitása</span>
                     <span className="nyil">→</span>
                   </button>
+                  <button
+                    className="gomb masodlagos kicsi"
+                    onClick={() => nav(`/dosszie?alk=${a.kod}`)}
+                  >
+                    ▦ Dosszié
+                  </button>
                 </div>
               </div>
             );
