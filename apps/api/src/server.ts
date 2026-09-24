@@ -4,6 +4,23 @@ import { config } from './config.js';
 import { OidcProvider } from './auth/oidc-provider.js';
 import { jwksVerifikator } from './auth/oidc-verifier.js';
 import type { AuthProvider } from './auth/provider.js';
+import { utemezoIndit } from './utemezo/idozito.js';
+
+/**
+ * Éles indulási biztonsági ellenőrzések — fail-fast, mielőtt bármit kiszolgálnánk.
+ * A production nem indulhat el a dev fejléc-hitelesítéssel (tetszőleges
+ * megszemélyesítés), sem a melléklet-URL aláíró titok nélkül.
+ */
+function elesGuard(): void {
+  if (!config.eles) return;
+  if (config.authProvider !== 'oidc')
+    throw new Error(
+      'Éles indulás dev hitelesítéssel megtagadva: állíts be AUTH_PROVIDER=oidc-ot ' +
+        '(a dev fejléc-provider tetszőleges felhasználó megszemélyesítését engedné).',
+    );
+  if (!config.mellekletTitok)
+    throw new Error('Éles indulás megtagadva: MELLEKLET_URL_SECRET megadása kötelező.');
+}
 
 /** A konfigurált hitelesítési provider (dev fejléc vagy OIDC + JWKS). */
 function authProvider(): AuthProvider | undefined {
@@ -20,6 +37,7 @@ function authProvider(): AuthProvider | undefined {
 }
 
 async function fo(): Promise<void> {
+  elesGuard();
   const provider = authProvider();
   const app = await buildApp(provider ? { authProvider: provider } : {});
 
@@ -35,6 +53,8 @@ async function fo(): Promise<void> {
       try {
         await csatlakozasDb();
         app.log.info('MongoDB kapcsolat él');
+        // Az ütemezőt csak élő DB-kapcsolat után indítjuk (az elosztott zár DB-t igényel).
+        utemezoIndit(app.log);
         return;
       } catch (e) {
         app.log.warn({ err: e, kiserlet }, 'MongoDB nem elérhető — újrapróbálkozás 5 mp múlva');

@@ -3,6 +3,7 @@ import type { Statusz } from '@kartotek/shared';
 import { Elem, type ElemDoc } from '../db/modellek.js';
 import { hiba400, hiba404 } from '../hibak.js';
 import { tarolt } from '../tarhely/tarhely.js';
+import { alairtTartalomUtvonal } from './mellekletek/url-alairas.js';
 
 export type ElemHidratalt = HydratedDocument<ElemDoc>;
 
@@ -44,22 +45,38 @@ export function naplozEsLeptet(
 
 /**
  * Lean dokumentum → API-válasz: `_id` → `id`, `__v` elhagyva. A mellékletek
- * `vanTartalom` jelzőt kapnak: a tartalom-végpont ki tudja-e szolgálni a fájlt
- * (a seed:// és a csak-link Figma hivatkozás mögött nincs tárolt bájt) — így a
- * kliens meg sem próbálja letölteni a nem létező tartalmat.
+ * két származtatott mezőt kapnak:
+ *  - `vanTartalom`: a tartalom-végpont ki tudja-e szolgálni a fájlt (a seed://
+ *    és a csak-link Figma hivatkozás mögött nincs tárolt bájt) → a kliens meg
+ *    sem próbálja letölteni;
+ *  - `tartalomUrl`: rövid életre aláírt tartalom-URL (capability), amellyel a
+ *    natív <img>/<video> auth-fejléc nélkül is tölthet.
  */
 export function elemValasz(doc: Record<string, unknown>): Record<string, unknown> {
   const { _id, __v, ...rest } = doc;
+  const id = String(_id);
   const verziok = Array.isArray(rest.verziok)
     ? (rest.verziok as Record<string, unknown>[]).map((v) => ({
         ...v,
         mellekletek: Array.isArray(v.mellekletek)
-          ? (v.mellekletek as Record<string, unknown>[]).map((m) => ({
-              ...m,
-              vanTartalom: tarolt((m.figmaPng ?? m.tartalomHiv) as string | undefined),
-            }))
+          ? (v.mellekletek as Record<string, unknown>[]).map((m) => {
+              const vanTartalom = tarolt((m.figmaPng ?? m.tartalomHiv) as string | undefined);
+              return {
+                ...m,
+                vanTartalom,
+                ...(vanTartalom
+                  ? {
+                      tartalomUrl: alairtTartalomUtvonal(
+                        id,
+                        v.verzioSzam as number,
+                        m.mid as string,
+                      ),
+                    }
+                  : {}),
+              };
+            })
           : v.mellekletek,
       }))
     : rest.verziok;
-  return { id: String(_id), ...rest, verziok };
+  return { id, ...rest, verziok };
 }

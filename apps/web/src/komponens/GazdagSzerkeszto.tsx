@@ -4,11 +4,8 @@ import { Markdown as MarkdownKiterj } from 'tiptap-markdown';
 import { useQueryClient } from '@tanstack/react-query';
 import { feltoltFajl } from '../api/kliens';
 import { kiterjesztesek } from './tiptap-bovitmenyek';
-import type { Elem } from '../api/tipusok';
-
-function tartalomUrl(elemId: string, v: number, mid: string): string {
-  return `/api/elemek/${elemId}/verziok/${v}/mellekletek/${mid}/tartalom`;
-}
+import { jsonAlairtSrc, jsonNyersSrc } from './melleklet-url';
+import type { Elem, Melleklet } from '../api/tipusok';
 
 /**
  * Gazdag (TipTap, JSON) szerkesztő a részletes leíráshoz: formázás, tábla, link,
@@ -20,22 +17,32 @@ export function GazdagSzerkeszto({
   verzioSzam,
   ertek,
   leirasMd,
+  mellekletek = [],
   onChange,
 }: {
   elemId: string;
   verzioSzam: number;
   ertek: unknown;
   leirasMd: string;
+  /** A verzió mellékletei — a beágyazott média aláírt URL-jének feloldásához. */
+  mellekletek?: Melleklet[];
   onChange: (json: JSONContent) => void;
 }) {
   const qc = useQueryClient();
   const kepRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
 
+  // Betöltéskor a média-src-t aláírt URL-re cseréljük (a szerkesztőben is töltsön),
+  // mentéskor visszaírjuk nyersre — a tárolt tartalom kanonikus, lejárat-mentes marad.
+  const kezdo =
+    ertek && typeof ertek === 'object'
+      ? jsonAlairtSrc(ertek as JSONContent, mellekletek)
+      : ((ertek as JSONContent) ?? leirasMd ?? '');
+
   const editor = useEditor({
     extensions: [...kiterjesztesek(), MarkdownKiterj.configure({ html: false })],
-    content: (ertek as JSONContent) ?? leirasMd ?? '',
-    onUpdate: ({ editor }) => onChange(editor.getJSON()),
+    content: kezdo,
+    onUpdate: ({ editor }) => onChange(jsonNyersSrc(editor.getJSON())),
   });
 
   if (!editor) return null;
@@ -45,8 +52,8 @@ export function GazdagSzerkeszto({
     const elem = await feltoltFajl<Elem>(`/api/elemek/${elemId}/verziok/${verzioSzam}/mellekletek`, file);
     void qc.invalidateQueries({ queryKey: ['elem', elemId] });
     const v = elem.verziok.find((x) => x.verzioSzam === verzioSzam);
-    const mid = v?.mellekletek.at(-1)?.mid;
-    return mid ? tartalomUrl(elemId, verzioSzam, mid) : null;
+    // A frissen feltöltött melléklet aláírt URL-je a megjelenítéshez (mentéskor nyersre vált).
+    return v?.mellekletek.at(-1)?.tartalomUrl ?? null;
   };
 
   const kepFeltolt = async (file: File) => {

@@ -18,6 +18,8 @@ export interface Melleklet {
   figmaLink?: string;
   /** Az API-tól: a tartalom-végpont ki tudja-e szolgálni a fájlt. */
   vanTartalom?: boolean;
+  /** Az API-tól: rövid életre aláírt tartalom-URL (a natív média ezzel tölt). */
+  tartalomUrl?: string;
 }
 
 export interface Megjegyzes {

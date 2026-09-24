@@ -16,6 +16,7 @@ let tarhelyDir: string;
 
 const ANNA = 'kiss.anna@pelda.hu';
 const PETER = 'nagy.peter@pelda.hu';
+const VARGA = 'varga.dora@pelda.hu'; // Szerző @ Terminus (nem 3R)
 
 beforeAll(async () => {
   replset = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
@@ -140,6 +141,36 @@ describe('mellékletek', () => {
     const seedMell = busz!.verziok.flatMap((v) => v.mellekletek);
     expect(seedMell.length).toBeGreaterThan(0);
     for (const m of seedMell) expect(m.vanTartalom).toBe(false);
+  });
+
+  it('tartalom-hozzáférés: aláírt URL VAGY munkamenet+hatókör, egyébként 401/403', async () => {
+    const id = await ujVazlat();
+    const fel = await feltolt(`/api/elemek/${id}/verziok/1/mellekletek`, ANNA, PNG, 'kep.png', 'image/png');
+    const m = fel.json().verziok[0].mellekletek[0];
+    expect(m.tartalomUrl).toMatch(/exp=\d+&sig=[0-9a-f]+/);
+
+    const alairtUrl = m.tartalomUrl as string;
+    const nyersUt = alairtUrl.split('?')[0]!;
+
+    // 1) Aláírt URL, auth-fejléc NÉLKÜL → 200 (a natív <img> útja).
+    const alairt = await hiv('GET', alairtUrl, '');
+    expect(alairt.statusCode).toBe(200);
+
+    // 2) Nyers út, aláírás és munkamenet nélkül → 401.
+    const nincs = await hiv('GET', nyersUt, '');
+    expect(nincs.statusCode).toBe(401);
+
+    // 3) Nyers út, hitelesített + hatókörön belüli felhasználóval → 200.
+    const sessionOk = await hiv('GET', nyersUt, ANNA);
+    expect(sessionOk.statusCode).toBe(200);
+
+    // 4) Nyers út, hitelesített DE hatókörön kívüli felhasználóval → 403.
+    const idegen = await hiv('GET', nyersUt, VARGA);
+    expect(idegen.statusCode).toBe(403);
+
+    // 5) Manipulált aláírás, fejléc nélkül → 401.
+    const hamis = await hiv('GET', `${nyersUt}?exp=${Date.now() + 60000}&sig=deadbeef`, '');
+    expect(hamis.statusCode).toBe(401);
   });
 
   it('Hatályossá vált verzióra nem tölthető fel (befagyott) és fagyasztva beáll', async () => {

@@ -26,6 +26,7 @@ import * as velemenyezes from './velemenyezes/szolgaltatas.js';
 import * as kapcsolat from './kapcsolatok/szolgaltatas.js';
 import * as szervezet from './szervezet/szolgaltatas.js';
 import * as melleklet from './mellekletek/szolgaltatas.js';
+import { ervenyesAlairas } from './mellekletek/url-alairas.js';
 import { grafLekeres } from './graf/szolgaltatas.js';
 import { torlesElokeszit, elemTorles } from './torles/szolgaltatas.js';
 import { lefedettsegRiport, megfelelesRiport, hatasRiport } from './riportok/szolgaltatas.js';
@@ -410,16 +411,26 @@ export async function apiRoutes(appBase: FastifyInstance): Promise<void> {
 
   app.get(
     '/api/elemek/:id/verziok/:v/mellekletek/:mid/tartalom',
-    // Publikus olvasás: hogy a beágyazott <img>/<video> natívan töltsön (auth-fejléc nélkül).
-    // Az azonosítók kitalálhatatlanok; éles aláírt URL-ek: Fázis 7.
-    { schema: { tags: ['mellékletek'], params: MidParam } },
+    // Nem publikus: aláírt URL (a natív <img>/<video> ezzel tölt), VAGY hitelesített
+    // munkamenet + hatókör (a fejléces blob-fetch útnak). Egyik sem → 401/403.
+    {
+      schema: {
+        tags: ['mellékletek'],
+        params: MidParam,
+        querystring: z.object({ exp: z.coerce.number().optional(), sig: z.string().optional() }),
+      },
+    },
     async (req, reply) => {
-      const t = await melleklet.mellekletTartalom(
-        app.tarhely,
-        req.params.id,
-        req.params.v,
-        req.params.mid,
-      );
+      const { id, v, mid } = req.params;
+      const alairtOk = ervenyesAlairas(id, v, mid, req.query.exp, req.query.sig);
+      if (!alairtOk) {
+        const felh = req.felhasznalo;
+        if (!felh) return reply.code(401).send({ hiba: 'Bejelentkezés szükséges' });
+        const kod = await melleklet.elemAlkalmazasKod(id);
+        if (kod && !felh.globalisAdmin && !felh.tagsagok.some((t) => t.alkalmazasKod === kod))
+          return reply.code(403).send({ hiba: 'Nincs jogosultság az elem mellékletéhez.' });
+      }
+      const t = await melleklet.mellekletTartalom(app.tarhely, id, v, mid);
       if (!t) return reply.code(404).send({ hiba: 'A melléklet tartalma nem elérhető.' });
       return reply.header('content-type', t.mime).send(t.buffer);
     },

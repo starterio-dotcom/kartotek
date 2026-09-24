@@ -55,6 +55,7 @@ export function Szerkeszto({
         verzioSzam={verzio.verzioSzam}
         ertek={verzio.leiras}
         leirasMd={verzio.leirasMd}
+        mellekletek={verzio.mellekletek}
         onChange={setLeiras}
       />
 

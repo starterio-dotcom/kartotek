@@ -200,6 +200,17 @@ const JovahagyasiSzabalySchema = new Schema({
   kvorum: { type: Number, default: 1 },
 });
 
+/**
+ * Elosztott zár az ütemezőhöz: több API-példány (vagy újraindulás) ne futtassa
+ * kétszer ugyanarra a napra. A `_id` fix ('utemezo'); az atomi `utolsoFutasNap`
+ * csere (findOneAndUpdate) dönti el, melyik példány végezze el aznap a futást.
+ */
+const UtemezoZarSchema = new Schema({
+  _id: { type: String },
+  utolsoFutasNap: { type: String, default: null },
+  utoljaraModositva: { type: Date, default: null },
+});
+
 /* ---------- Modellek ---------- */
 
 export const Elem = model('Elem', ElemSchema);
@@ -212,6 +223,7 @@ export const Felhasznalo = model('Felhasznalo', FelhasznaloSchema);
 export const Tipus = model('Tipus', TipusSchema);
 export const Reteg = model('Reteg', RetegSchema);
 export const JovahagyasiSzabaly = model('JovahagyasiSzabaly', JovahagyasiSzabalySchema);
+export const UtemezoZar = model('UtemezoZar', UtemezoZarSchema);
 
 export type ElemDoc = InferSchemaType<typeof ElemSchema>;
 export type VerzioDoc = InferSchemaType<typeof VerzioSchema>;

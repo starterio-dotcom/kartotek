@@ -4,7 +4,8 @@ import { hiba400, hiba404, hiba409 } from '../../hibak.js';
 import { ellenoriz } from '../../auth/rbac.js';
 import type { AktualisFelhasznalo } from '../../auth/plugin.js';
 import type { Tarhely } from '../../tarhely/tarhely.js';
-import { elemBetolt, verzioKeres, elemValasz } from '../kozos.js';
+import { Elem } from '../../db/modellek.js';
+import { elemBetolt, verzioKeres, elemValasz, ervenyesId } from '../kozos.js';
 
 type Valasz = Record<string, unknown>;
 
@@ -106,6 +107,13 @@ export interface Tartalom {
   buffer: Buffer;
   mime: string;
   fajlNev: string;
+}
+
+/** Az elem alkalmazás-kódja (hatókör-ellenőrzéshez), vagy `null` ha nincs ilyen elem. */
+export async function elemAlkalmazasKod(id: string): Promise<string | null> {
+  if (!ervenyesId(id)) return null;
+  const doc = await Elem.findById(id).select('alkalmazasKod').lean();
+  return doc?.alkalmazasKod ?? null;
 }
 
 /** A melléklet bájtjai kiszolgáláshoz (vagy `null`, ha nincs tárolt fájl). */

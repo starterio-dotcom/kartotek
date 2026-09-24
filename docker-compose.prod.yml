@@ -30,10 +30,13 @@ services:
       TARHELY_DIR: /data/tarhely
       CORS_ORIGIN: ${CORS_ORIGIN:-}
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-300}
-      AUTH_PROVIDER: ${AUTH_PROVIDER:-dev}
+      # Éles módban az API elutasítja az indulást, ha ez nem 'oidc' (dev = megszemélyesíthető),
+      # vagy ha a MELLEKLET_URL_SECRET hiányzik — töltsd ki a .env-ben.
+      AUTH_PROVIDER: ${AUTH_PROVIDER:-oidc}
       OIDC_ISSUER: ${OIDC_ISSUER:-}
       OIDC_AUDIENCE: ${OIDC_AUDIENCE:-}
       OIDC_JWKS_URI: ${OIDC_JWKS_URI:-}
+      MELLEKLET_URL_SECRET: ${MELLEKLET_URL_SECRET:-}
     volumes:
       - tarhely-data:/data/tarhely
     depends_on:

@@ -35,6 +35,9 @@ export const MellekletSchema = z.object({
   // Az API válaszában származtatott jelző: a tartalom-végpont ki tudja-e
   // szolgálni a fájlt (seed:// és csak-link Figma mögött nincs tárolt bájt).
   vanTartalom: z.boolean().optional(),
+  // Az API válaszában származtatott, rövid életre aláírt tartalom-URL. A natív
+  // <img>/<video> ezzel tölt (auth-fejléc nélkül), mert az aláírás a hitelesítés.
+  tartalomUrl: z.string().optional(),
 });
 
 export const MegjegyzesSchema = z.object({

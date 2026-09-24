@@ -29,6 +29,15 @@ export const config = {
   authProvider: (process.env.AUTH_PROVIDER ?? 'dev') as 'dev' | 'oidc',
   /** OIDC-belépőnek, ha még nincs DB-felhasználója, hozzunk-e létre jogosultság nélkülit. */
   autoProvision: (process.env.OIDC_AUTO_PROVISION ?? 'false') === 'true',
+  /** A melléklet-tartalom aláírt URL-jeit hitelesítő titok. Éles: kötelező (indulási guard);
+   *  dev/teszt: rögzített fallback (a natív média így is tölt). */
+  mellekletTitok: process.env.MELLEKLET_URL_SECRET ?? (eles ? undefined : 'dev-melleklet-titok'),
+  /** Az aláírt melléklet-URL érvényességi ideje ms-ben (alap 24 óra). */
+  mellekletUrlTtlMs: Number(process.env.MELLEKLET_URL_TTL_MS ?? 24 * 60 * 60 * 1000),
+  /** A szerveroldali ütemező automatizmusa (dátumvezérelt átmenetek). */
+  utemezoAktiv: (process.env.UTEMEZO_AKTIV ?? 'true') === 'true',
+  /** Az ütemező ellenőrzési gyakorisága ms-ben (alap óránként). */
+  utemezoIntervalMs: Number(process.env.UTEMEZO_INTERVAL_MS ?? 60 * 60 * 1000),
   oidc: {
     issuer: process.env.OIDC_ISSUER,
     audience: process.env.OIDC_AUDIENCE,
