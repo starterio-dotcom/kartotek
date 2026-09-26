@@ -10,6 +10,11 @@ describe('audit megjelenítés', () => {
     );
   });
 
+  it('az elemlista feliratát az esemény dönti el (a query nincs tárolva)', () => {
+    expect(muveletCimke('GET', '/api/elemek', 'olvasas')).toBe('Teljes elemlista (dosszié)');
+    expect(muveletCimke('GET', '/api/elemek', 'hozzaferes-megtagadva')).toBe('Elemlista lekérése');
+  });
+
   it('ismeretlen útvonalnál a nyers metódus+minta a felirat', () => {
     expect(muveletCimke('PUT', '/api/valami/:x')).toBe('PUT /api/valami/:x');
   });

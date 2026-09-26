@@ -14,7 +14,7 @@ const V = '/api/elemek/:id/verziok/:v';
 /** Útvonal-minta + metódus → emberi műveletnév. */
 const MUVELETEK: Record<string, string> = {
   'POST /api/elemek': 'Elem létrehozása',
-  'GET /api/elemek': 'Teljes elemlista (dosszié)',
+  'GET /api/elemek': 'Elemlista lekérése',
   'GET /api/elemek/:id': 'Elem megtekintése',
   'DELETE /api/elemek/:id': 'Elem törlése',
   'PATCH /api/elemek/:id/cimkek': 'Címkék módosítása',
@@ -48,7 +48,11 @@ const MUVELETEK: Record<string, string> = {
   'GET /api/audit': 'Audit-napló lekérdezése',
 };
 
-export function muveletCimke(metodus: string, utvonal: string): string {
+export function muveletCimke(metodus: string, utvonal: string, esemeny?: AuditEsemeny): string {
+  // A query-t a napló szándékosan nem tárolja, így a lista-nézetet az esemény dönti el:
+  // az elemlista csak TELJES nézetben számít naplózott olvasásnak.
+  if (metodus === 'GET' && utvonal === '/api/elemek' && esemeny === 'olvasas')
+    return 'Teljes elemlista (dosszié)';
   return MUVELETEK[`${metodus} ${utvonal}`] ?? `${metodus} ${utvonal}`;
 }
 

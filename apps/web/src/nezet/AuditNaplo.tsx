@@ -141,7 +141,7 @@ export function AuditNaplo() {
                   <td>
                     <span className={`audit-esemeny audit-${b.esemeny}`}>{ESEMENY_FELIRAT[b.esemeny]}</span>
                   </td>
-                  <td title={`${b.metodus} ${b.ut}`}>{muveletCimke(b.metodus, b.utvonal)}</td>
+                  <td title={`${b.metodus} ${b.ut}`}>{muveletCimke(b.metodus, b.utvonal, b.esemeny)}</td>
                   <td>
                     {b.elemId && b.elemKulcs ? (
                       <Link to={`/elem/${b.elemId}`}>{b.elemKulcs}</Link>
