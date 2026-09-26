@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { STATUSZOK, uzletiTipus, lefedetlenBus, type Statusz, type TipusKod } from '@kartotek/shared';
-import { useElemek, useGraf, useAlkalmazasok, useSzolgaltatasok } from '../api/hooks';
+import { useElemekTeljes, useGraf, useAlkalmazasok, useSzolgaltatasok } from '../api/hooks';
 import { Betolto, Hiba } from '../komponens/ui';
 import { GazdagNezet } from '../komponens/GazdagNezet';
 import { Markdown } from '../komponens/Markdown';
@@ -268,7 +268,10 @@ export function Dosszie() {
 
   const { data: alkalmazasok } = useAlkalmazasok();
   const { data: szolgaltatasok } = useSzolgaltatasok();
-  const { data: elemek, isLoading, isError, error } = useElemek({ alkalmazasKod: alk });
+  // A dosszié a tartalmat is megjeleníti → teljes nézet (a szerver alkalmazásra korlátozza).
+  const { data: lista, isLoading, isError, error } = useElemekTeljes(alk);
+  const elemek = lista?.elemek;
+  const csonkolt = !!lista && lista.osszes > lista.elemek.length;
   const { data: graf } = useGraf(alk);
 
   const alkalmazas = (alkalmazasok ?? []).find((a) => a.kod === alk);
@@ -378,6 +381,12 @@ export function Dosszie() {
             </div>
           </div>
         </div>
+
+        {csonkolt && (
+          <div className="lista-csonkolt no-print" role="status">
+            A dosszié az első {lista!.elemek.length} elemet tartalmazza ({lista!.osszes} közül).
+          </div>
+        )}
 
         {ossz === 0 ? (
           <div className="d-ures">

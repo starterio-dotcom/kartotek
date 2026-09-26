@@ -6,6 +6,7 @@ import { Dosszie } from './nezet/Dosszie';
 import { Riportok } from './nezet/Riportok';
 import { Kiadasok } from './nezet/Kiadasok';
 import { Felhasznalok } from './nezet/Felhasznalok';
+import { AuditNaplo } from './nezet/AuditNaplo';
 
 export function App() {
   return (
@@ -17,6 +18,7 @@ export function App() {
         <Route path="riportok" element={<Riportok />} />
         <Route path="kiadasok" element={<Kiadasok />} />
         <Route path="felhasznalok" element={<Felhasznalok />} />
+        <Route path="audit" element={<AuditNaplo />} />
         {/* A gráfot az Elrendezes közvetlenül rendeli (teljes szélességben). */}
         <Route path="graf" element={null} />
       </Route>

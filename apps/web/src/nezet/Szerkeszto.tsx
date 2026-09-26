@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { JSONContent } from '@tiptap/core';
+import { useQueryClient } from '@tanstack/react-query';
 import { useVerzioSzerkesztes } from '../api/hooks';
 import { Hiba } from '../komponens/ui';
 import { GazdagSzerkeszto } from '../komponens/GazdagSzerkeszto';
@@ -16,6 +17,9 @@ export function Szerkeszto({
   onKesz: () => void;
 }) {
   const mentes = useVerzioSzerkesztes(elem.id, verzio.verzioSzam);
+  const qc = useQueryClient();
+  // Optimista zár: a szerkesztő MEGNYITÁSAKORI revízió az alap (a cache közben frissülhet).
+  const [alapRevizio] = useState(() => verzio.revizio ?? 0);
   const tm = verzio.tipusMezok as { rovid?: string; elofeltetelek?: string; kriteriumok?: string };
   const dokumentum = elem.tipusKod === 'BD' || elem.tipusKod === 'TD';
   const [rovid, setRovid] = useState(tm.rovid ?? '');
@@ -30,9 +34,22 @@ export function Szerkeszto({
         cimkek: cimkek.split(',').map((s) => s.trim()).filter(Boolean),
         tipusMezok: dokumentum ? { ...tm, rovid } : { ...tm, rovid, elofeltetelek, kriteriumok },
         ...(leiras !== undefined ? { leiras } : {}),
+        alapRevizio,
       },
       { onSuccess: onKesz },
     );
+  };
+
+  // Ütközés: valaki más közben mentette ugyanezt a verziót (409 + reszletek.aktualisRevizio).
+  const utkozes =
+    mentes.isError &&
+    (mentes.error as ApiHiba).statusCode === 409 &&
+    ((mentes.error as ApiHiba).reszletek as { aktualisRevizio?: number } | undefined)
+      ?.aktualisRevizio !== undefined;
+
+  const frissitEsBezar = () => {
+    void qc.invalidateQueries({ queryKey: ['elem', elem.id] });
+    onKesz();
   };
 
   return (
@@ -81,7 +98,17 @@ export function Szerkeszto({
       <label className="szerk-cimke">Címkék (vesszővel)</label>
       <input className="mezo-be" value={cimkek} onChange={(e) => setCimkek(e.target.value)} />
 
-      {mentes.isError && <Hiba uzenet={(mentes.error as ApiHiba).message} />}
+      {utkozes ? (
+        <div className="hiba-doboz" role="alert">
+          <b>Mentési ütközés.</b> {(mentes.error as ApiHiba).message}{' '}
+          A saját módosításaidat másold ki, mielőtt újratöltesz.{' '}
+          <button className="gomb masodlagos" onClick={frissitEsBezar}>
+            Legfrissebb változat betöltése
+          </button>
+        </div>
+      ) : (
+        mentes.isError && <Hiba uzenet={(mentes.error as ApiHiba).message} />
+      )}
     </>
   );
 }

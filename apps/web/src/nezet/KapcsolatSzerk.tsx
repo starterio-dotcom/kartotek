@@ -4,7 +4,7 @@ import { szabad, KAPCSOLAT_FAJTAK, type KapcsolatFajta } from '@kartotek/shared'
 import { useElemek, useKapcsolatLetrehozas, useKapcsolatTorles } from '../api/hooks';
 import { Modal, Hiba } from '../komponens/ui';
 import { ApiHiba } from '../api/kliens';
-import type { Elem, ElemKapcsolatok, Felhasznalo, Kapcsolat } from '../api/tipusok';
+import type { Elem, ElemKapcsolatok, ElemOsszegzo, Felhasznalo, Kapcsolat } from '../api/tipusok';
 
 export function KapcsolatSzerk({
   elem,
@@ -17,7 +17,8 @@ export function KapcsolatSzerk({
 }) {
   const [ujNyitva, setUjNyitva] = useState(false);
   const torles = useKapcsolatTorles(elem.id);
-  const { data: osszesElem } = useElemek({});
+  const { data: lista } = useElemek({});
+  const osszesElem = lista?.elemek;
   const kulcsMap = useMemo(() => {
     const m = new Map<string, string>();
     (osszesElem ?? []).forEach((e) => m.set(e.id, e.kulcs));
@@ -104,7 +105,7 @@ function UjKapcsolatModal({
   onBezar,
 }: {
   elem: Elem;
-  elemek: Elem[];
+  elemek: ElemOsszegzo[];
   onBezar: () => void;
 }) {
   const felvesz = useKapcsolatLetrehozas(elem.id);

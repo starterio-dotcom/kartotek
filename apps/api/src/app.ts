@@ -15,6 +15,7 @@ import { config } from './config.js';
 import { hibakezeloRegisztracio } from './hibak.js';
 import { authPlugin } from './auth/plugin.js';
 import { biztonsagPlugin } from './biztonsag/plugin.js';
+import { auditPlugin } from './audit/plugin.js';
 import type { AuthProvider } from './auth/provider.js';
 import { apiRoutes } from './modulok/routes.js';
 import { LemezTarhely, type Tarhely } from './tarhely/tarhely.js';
@@ -31,7 +32,9 @@ export interface AppOpciok {
 }
 
 export async function buildApp(opts: AppOpciok = {}): Promise<FastifyInstance> {
-  const app = Fastify({ logger: true }).withTypeProvider<ZodTypeProvider>();
+  // trustProxy: a req.ip a reverse proxy X-Forwarded-For-jából jön (csak megbízható
+  // proxytól) — enélkül minden kérés a proxy IP-jéről érkezne (közös rate-limit vödör).
+  const app = Fastify({ logger: true, trustProxy: config.trustProxy }).withTypeProvider<ZodTypeProvider>();
 
   // A Zod-sémák egyszerre validálnak és adják az OpenAPI-leírást.
   app.setValidatorCompiler(validatorCompiler);
@@ -43,14 +46,19 @@ export async function buildApp(opts: AppOpciok = {}): Promise<FastifyInstance> {
   await app.register(cors, {
     origin: config.corsOrigin ?? (config.eles ? false : true),
     credentials: true,
+    // A lapozás összesítő fejléce kereszt-originű (dev) kliensnek is olvasható legyen.
+    exposedHeaders: ['X-Osszes'],
   });
   await app.register(multipart, { limits: { fileSize: 20 * 1024 * 1024 } }); // 20 MB
   await app.register(biztonsagPlugin, {
     rateLimitMax: config.rateLimitMax,
+    rateLimitFelhasznaloMax: config.rateLimitFelhasznaloMax,
     rateLimitAblakMs: config.rateLimitAblakMs,
     eles: config.eles,
   });
   await app.register(authPlugin, { ...(opts.authProvider ? { provider: opts.authProvider } : {}) });
+  // Az audit a hitelesítés UTÁN (az onResponse-ban már ismert a felhasználó).
+  await app.register(auditPlugin);
 
   app.decorate('tarhely', opts.tarhely ?? new LemezTarhely(config.tarhelyDir));
 

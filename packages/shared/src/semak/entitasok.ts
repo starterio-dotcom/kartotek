@@ -72,6 +72,8 @@ export const VerzioSchema = z.object({
   kiadasIds: z.array(IdSchema).default([]),
   letrehozva: z.coerce.date(),
   modositottaId: IdSchema,
+  /** Tartalmi revízió (optimista zár) — minden Vázlat-szerkesztés növeli. */
+  revizio: z.number().int().nonnegative().optional(),
   statusznaplo: z.array(StatusznaploSchema).default([]),
   mellekletek: z.array(MellekletSchema).default([]),
   megjegyzesek: z.array(MegjegyzesSchema).default([]),

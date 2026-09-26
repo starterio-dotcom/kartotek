@@ -11,9 +11,9 @@ import {
 } from '../api/hooks';
 import { useAuth } from '../allapot/auth';
 import { Betolto, Modal, Hiba } from '../komponens/ui';
-import type { Alkalmazas, Elem } from '../api/tipusok';
+import type { Alkalmazas, ElemOsszegzo } from '../api/tipusok';
 
-function foStatusz(e: Elem): Statusz {
+function foStatusz(e: ElemOsszegzo): Statusz {
   const v = e.verziok.reduce((a, b) => (b.verzioSzam > a.verzioSzam ? b : a), e.verziok[0]!);
   return v?.statusz ?? 'Vázlat';
 }
@@ -23,7 +23,8 @@ export function Attekintes() {
   const { felhasznalo } = useAuth();
   const { data: szolgaltatasok, isLoading: sBetolt } = useSzolgaltatasok();
   const { data: alkalmazasok } = useAlkalmazasok();
-  const { data: elemek } = useElemek({});
+  const { data: elemLista } = useElemek({});
+  const elemek = elemLista?.elemek;
   const [modal, setModal] = useState<'ujSzolg' | 'ujAlk' | null>(null);
   const [szerkAlk, setSzerkAlk] = useState<Alkalmazas | null>(null);
 

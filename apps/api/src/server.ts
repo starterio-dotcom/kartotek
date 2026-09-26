@@ -43,7 +43,7 @@ async function fo(): Promise<void> {
 
   // Először figyeljünk (a /health azonnal válaszol), a DB-t a háttérben kötjük be.
   // A kapcsolat hiánya nem dönti le az API-t — a /health jelzi az állapotot.
-  await app.listen({ port: config.port, host: '0.0.0.0' });
+  await app.listen({ port: config.port, host: config.host });
 
   // Újrapróbálkozás, amíg a DB elérhetővé nem válik — az API nem függhet attól,
   // hogy a mongod előbb indult-e el (együttes restart/boot). A sikeres első

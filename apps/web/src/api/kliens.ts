@@ -41,10 +41,10 @@ export class ApiHiba extends Error {
   }
 }
 
-async function keres<T>(
+async function keresValasz<T>(
   utvonal: string,
   opts: { method?: string; body?: unknown } = {},
-): Promise<T> {
+): Promise<{ adat: T; res: Response }> {
   const fejlec: Record<string, string> = { ...authFejlec() };
   if (opts.body !== undefined) fejlec['content-type'] = 'application/json';
 
@@ -54,7 +54,7 @@ async function keres<T>(
     ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}),
   });
 
-  if (res.status === 204) return undefined as T;
+  if (res.status === 204) return { adat: undefined as T, res };
 
   const szoveg = await res.text();
   const adat = szoveg ? JSON.parse(szoveg) : undefined;
@@ -62,7 +62,18 @@ async function keres<T>(
     const uzenet = (adat && (adat.hiba as string)) || `Hiba (${res.status})`;
     throw new ApiHiba(res.status, uzenet, adat?.reszletek);
   }
-  return adat as T;
+  return { adat: adat as T, res };
+}
+
+async function keres<T>(utvonal: string, opts: { method?: string; body?: unknown } = {}): Promise<T> {
+  return (await keresValasz<T>(utvonal, opts)).adat;
+}
+
+/** Lapozott lista: a törzs + az összes találat száma (X-Osszes fejléc). */
+export async function getLapozott<T>(utvonal: string): Promise<{ adat: T[]; osszes: number }> {
+  const { adat, res } = await keresValasz<T[]>(utvonal);
+  const fejlec = res.headers.get('x-osszes');
+  return { adat, osszes: fejlec !== null ? Number(fejlec) : adat.length };
 }
 
 /** Nyers (bináris) lekérés a melléklet-tartalomhoz — a dev-fejléccel együtt. */

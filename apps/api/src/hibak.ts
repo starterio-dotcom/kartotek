@@ -20,7 +20,7 @@ export const hiba409 = (uzenet: string, reszletek?: unknown) => new AppHiba(409,
 
 /** Egységes hibakezelő: AppHiba, Zod-validáció és MongoDB-duplikátum kezelése. */
 export function hibakezeloRegisztracio(app: FastifyInstance): void {
-  app.setErrorHandler((error: Error & { statusCode?: number; validation?: unknown; code?: string }, _req, reply) => {
+  app.setErrorHandler((error: Error & { statusCode?: number; validation?: unknown; code?: string | number }, _req, reply) => {
     if (error instanceof AppHiba) {
       return reply.code(error.statusCode).send({ hiba: error.message, reszletek: error.reszletek });
     }
@@ -31,8 +31,15 @@ export function hibakezeloRegisztracio(app: FastifyInstance): void {
     if (error.validation) {
       return reply.code(400).send({ hiba: 'Érvénytelen bemenet', reszletek: error.validation });
     }
-    if (error.code === '11000') {
+    // A MongoDB a kódot SZÁMKÉNT adja (11000); a régi sztring-összevetés sosem illeszkedett.
+    if (Number(error.code) === 11000) {
       return reply.code(409).send({ hiba: 'Ütköző egyedi érték (duplikátum)' });
+    }
+    // Optimista zár: az elemet egy párhuzamos kérés közben módosította.
+    if (error.name === 'VersionError') {
+      return reply.code(409).send({
+        hiba: 'Az elemet időközben más módosította — töltsd újra, és ismételd meg a műveletet.',
+      });
     }
     const code = error.statusCode && error.statusCode >= 400 ? error.statusCode : 500;
     if (code === 500) app.log.error(error);

@@ -7,10 +7,10 @@ export function CimkeSzerk({ elem, felhasznalo }: { elem: Elem; felhasznalo: Fel
   const [szerk, setSzerk] = useState(false);
   const [uj, setUj] = useState('');
   const frissites = useCimkekFrissites(elem.id);
-  const { data: osszesElem } = useElemek({});
+  const { data: lista } = useElemek({});
 
   const kezelheto = szabad('címke.kezelés', { felhasznalo, alkalmazasKod: elem.alkalmazasKod });
-  const osszesCimke = [...new Set((osszesElem ?? []).flatMap((e) => e.cimkek))].sort();
+  const osszesCimke = [...new Set((lista?.elemek ?? []).flatMap((e) => e.cimkek))].sort();
   const javaslatok = osszesCimke.filter((t) => !elem.cimkek.includes(t)).slice(0, 14);
 
   const ment = (cimkek: string[]) => frissites.mutate(cimkek);

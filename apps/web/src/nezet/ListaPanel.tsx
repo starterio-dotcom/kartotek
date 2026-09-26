@@ -5,7 +5,7 @@ import { TIPUS_KODOK, type Statusz } from '@kartotek/shared';
 import { useElemek, useAlkalmazasok } from '../api/hooks';
 import { api } from '../api/kliens';
 import { Betolto, Hiba } from '../komponens/ui';
-import type { Elem, Verzio } from '../api/tipusok';
+import type { ElemOsszegzo, VerzioOsszegzo } from '../api/tipusok';
 
 /* ---------- Mentett szűrők (localStorage) ---------- */
 const SZURO_KULCS = 'kartotek.mentett-szurok';
@@ -33,7 +33,7 @@ const TABOK: { kulcs: string; nev: string; statuszok: Statusz[] | null }[] = [
 ];
 
 /** A listában kiemelt verzió: a legfrissebb nem-végállapotú, vagy a legmagasabb. */
-function elsodlegesVerzio(e: Elem): Verzio {
+function elsodlegesVerzio(e: ElemOsszegzo): VerzioOsszegzo {
   const aktiv = e.verziok.filter((v) => !['Elvetve', 'Archivált'].includes(v.statusz));
   const halmaz = aktiv.length ? aktiv : e.verziok;
   return halmaz.reduce((a, b) => (b.verzioSzam > a.verzioSzam ? b : a), halmaz[0]!);
@@ -50,6 +50,9 @@ export function ListaPanel() {
   const tipusHalmaz = new Set((params.get('tipus') ?? '').split(',').filter(Boolean));
 
   const { data, isLoading, isError, error } = useElemek(alk ? { alkalmazasKod: alk } : {});
+  const elemek = data?.elemek;
+  // A szerver egy kérésben korlátos számú elemet ad; ha több van, jelezzük (nincs néma csonkolás).
+  const csonkolt = !!data && data.osszes > data.elemek.length;
 
   const valt = (kulcs: string, ertek: string) => {
     const uj = new URLSearchParams(params);
@@ -85,7 +88,7 @@ export function ListaPanel() {
     const cimke = window.prompt('Az összes kijelölt elemhez hozzáadandó címke:')?.trim();
     if (!cimke) return;
     for (const eid of kijelolt) {
-      const e = (data ?? []).find((x) => x.id === eid);
+      const e = (elemek ?? []).find((x) => x.id === eid);
       if (!e) continue;
       const ujCimkek = [...new Set([...(e.cimkek ?? []), cimke])];
       try {
@@ -113,7 +116,7 @@ export function ListaPanel() {
   };
 
   const aktivTab = TABOK.find((t) => t.kulcs === tab) ?? TABOK[0]!;
-  const talalatok = (data ?? []).filter((e) => {
+  const talalatok = (elemek ?? []).filter((e) => {
     if (tipusHalmaz.size && !tipusHalmaz.has(e.tipusKod)) return false;
     if (aktivTab.statuszok && !e.verziok.some((v) => aktivTab.statuszok!.includes(v.statusz)))
       return false;
@@ -176,7 +179,7 @@ export function ListaPanel() {
 
         <div className="szegmens">
           {TABOK.map((t) => {
-            const db = (data ?? []).filter(
+            const db = (elemek ?? []).filter(
               (e) => !t.statuszok || e.verziok.some((v) => t.statuszok!.includes(v.statusz)),
             ).length;
             return (
@@ -207,6 +210,12 @@ export function ListaPanel() {
 
       <div className="lista">
         {isLoading && <Betolto />}
+        {csonkolt && (
+          <div className="lista-csonkolt" role="status">
+            Az első {data!.elemek.length} elem látszik ({data!.osszes} közül) — szűkíts alkalmazásra,
+            típusra vagy keresésre.
+          </div>
+        )}
         {isError && <Hiba uzenet={(error as Error).message} />}
         {data && talalatok.length === 0 && (
           <div className="lista-ures">

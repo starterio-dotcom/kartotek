@@ -133,7 +133,8 @@ describe('mellékletek', () => {
     expect(mk[mk.length - 1]!.vanTartalom).toBe(false);
 
     // A seed-elem mellékletei mögött nincs tárolt fájl (seed:// hivatkozás).
-    const lista = await hiv('GET', '/api/elemek?alkalmazasKod=3R', ANNA);
+    // A mellékletek a teljes nézetben vannak (az összegző lista szándékosan kihagyja őket).
+    const lista = await hiv('GET', '/api/elemek?alkalmazasKod=3R&nezet=teljes', ANNA);
     const busz = (
       lista.json() as { kulcs: string; verziok: { mellekletek: { vanTartalom?: boolean }[] }[] }[]
     ).find((e) => e.kulcs === '3R-BUS-002');

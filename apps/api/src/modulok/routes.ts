@@ -19,6 +19,7 @@ import {
   elemLista,
   elemReszlet,
   cimkekFrissites,
+  OSSZEGZO_MAX,
   type ElemSzuro,
 } from './elemek/szolgaltatas.js';
 import * as verzio from './verziok/szolgaltatas.js';
@@ -32,6 +33,8 @@ import { torlesElokeszit, elemTorles } from './torles/szolgaltatas.js';
 import { lefedettsegRiport, megfelelesRiport, hatasRiport } from './riportok/szolgaltatas.js';
 import * as kiadas from './kiadasok/szolgaltatas.js';
 import { utemezoFut } from '../utemezo/szolgaltatas.js';
+import { auditLista } from '../audit/szolgaltatas.js';
+import { globalisAdminKell } from '../auth/plugin.js';
 
 const IdParam = z.object({ id: z.string() });
 const VerzioParam = z.object({ id: z.string(), v: z.coerce.number().int().positive() });
@@ -45,6 +48,10 @@ const LISTA_SZURO = z.object({
   statusz: StatuszSchema.optional(),
   cimke: z.string().optional(),
   kereses: z.string().optional(),
+  // Lapozás + projekció: az alap az összegző nézet; a teljes csak alkalmazásra szűrve.
+  nezet: z.enum(['osszegzo', 'teljes']).default('osszegzo'),
+  limit: z.coerce.number().int().min(1).max(OSSZEGZO_MAX).optional(),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
 export async function apiRoutes(appBase: FastifyInstance): Promise<void> {
@@ -176,10 +183,13 @@ export async function apiRoutes(appBase: FastifyInstance): Promise<void> {
   app.get(
     '/api/elemek',
     { schema: { tags: ['elemek'], querystring: LISTA_SZURO } },
-    async (req) => {
+    async (req, reply) => {
       const felh = app.bejelentkezesKell(req);
       const szuro: ElemSzuro = { ...req.query, lathatoAlkalmazasok: lathatoAlkalmazasok(felh) };
-      return elemLista(szuro);
+      const { elemek, osszes } = await elemLista(szuro);
+      // A törzs tömb marad (kompatibilis); az összes találat a fejlécben (lapozáshoz).
+      reply.header('X-Osszes', String(osszes));
+      return elemek;
     },
   );
 
@@ -542,6 +552,32 @@ export async function apiRoutes(appBase: FastifyInstance): Promise<void> {
       // Az ütemezőt csak globális Admin indíthatja kézzel (RENDSZER nevében naplóz).
       if (!felh.globalisAdmin) throw hiba403('Az ütemezőt csak globális Admin indíthatja.');
       return utemezoFut(req.body?.ma);
+    },
+  );
+
+  /* ---------- Audit-napló (csak olvasás, csak globális Admin) ---------- */
+  app.get(
+    '/api/audit',
+    {
+      schema: {
+        tags: ['audit'],
+        querystring: z.object({
+          felhasznalo: z.string().optional(),
+          elemId: z.string().optional(),
+          esemeny: z.enum(['modositas', 'hozzaferes-megtagadva', 'olvasas']).optional(),
+          metodus: z.string().optional(),
+          statusz: z.coerce.number().int().optional(),
+          tol: z.coerce.date().optional(),
+          ig: z.coerce.date().optional(),
+          limit: z.coerce.number().int().min(1).max(500).default(100),
+          offset: z.coerce.number().int().min(0).default(0),
+        }),
+      },
+    },
+    async (req) => {
+      const felh = app.bejelentkezesKell(req);
+      globalisAdminKell(felh);
+      return auditLista(req.query);
     },
   );
 }

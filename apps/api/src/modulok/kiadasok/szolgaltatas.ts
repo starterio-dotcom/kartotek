@@ -45,7 +45,8 @@ export async function verzioKiadasBeallit(
   } else {
     v.kiadasIds = v.kiadasIds.filter((x) => String(x) !== kiadasId) as never;
   }
-  elem.markModified('verziok');
+  // A kiadasIds ObjectId-tömb: a push/értékadást a Mongoose célzottan követi (nem kell
+  // a teljes `verziok` tömböt újraírni — az más verziók párhuzamos változását felülírhatná).
   await elem.save();
   return elemValasz(elem.toObject());
 }

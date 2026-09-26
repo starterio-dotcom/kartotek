@@ -14,7 +14,15 @@ function bekuldesreKesz(verzio: { cim?: string; leirasMd?: string }): string[] {
   return hianyzo;
 }
 
-/** Vázlat-verzió szerkesztése (tartalmi zár: csak Vázlat módosítható). */
+/**
+ * Vázlat-verzió szerkesztése (tartalmi zár: csak Vázlat módosítható).
+ *
+ * Optimista zár két szinten:
+ *  - `alapRevizio`: ha a kliens elavult nézetből ment (valaki közben szerkesztett),
+ *    409 — a szerver ugyanis minden kérésnél frissen tölt, így önmagában nem venné észre;
+ *  - az elem `optimisticConcurrency`-je: két egyidejű kérés közül a vesztes VersionError-t kap.
+ * Csak a módosított útvonalak íródnak (célzott markModified), nem a teljes `verziok` tömb.
+ */
 export async function verzioSzerkesztes(
   id: string,
   verzioSzam: number,
@@ -27,22 +35,32 @@ export async function verzioSzerkesztes(
   if (v.statusz !== 'Vázlat')
     throw hiba409('Csak Vázlat státuszú verzió szerkeszthető (a jóváhagyott tartalom zárolt).');
 
+  const aktRevizio = (v as { revizio?: number }).revizio ?? 0;
+  if (be.alapRevizio !== undefined && be.alapRevizio !== aktRevizio)
+    throw hiba409(
+      'A verziót időközben más módosította. Töltsd újra a legfrissebb változatot, és ismételd meg a módosításodat.',
+      { aktualisRevizio: aktRevizio, alapRevizio: be.alapRevizio, modositottaId: String(v.modositottaId) },
+    );
+
+  const idx = elem.verziok.findIndex((x) => x.verzioSzam === verzioSzam);
+  const ut = `verziok.${idx}`;
+
   if (be.cim !== undefined) v.cim = be.cim;
   if (be.leirasMd !== undefined) v.leirasMd = be.leirasMd;
   if (be.leiras !== undefined) {
     (v as { leiras?: unknown }).leiras = be.leiras;
-    elem.markModified('verziok');
+    elem.markModified(`${ut}.leiras`); // Mixed mező: a változást jelezni kell
   }
   if (be.cimkek !== undefined) elem.cimkek = be.cimkek;
   if (be.tipusMezok !== undefined) {
     v.tipusMezok = be.tipusMezok;
-    elem.markModified('verziok');
+    elem.markModified(`${ut}.tipusMezok`);
   }
   v.modositottaId = felh.id as never;
+  (v as { revizio?: number }).revizio = aktRevizio + 1;
   // A szerkesztő rögzítése a négy-szem-elvhez (minden tartalom-szerkesztő számít).
   const szerk = (v as { szerkesztok?: unknown[] }).szerkesztok ?? ((v as { szerkesztok: unknown[] }).szerkesztok = []);
   if (!szerk.some((s) => String(s) === felh.id)) szerk.push(felh.id);
-  elem.markModified('verziok');
   await elem.save();
   return elemValasz(elem.toObject());
 }

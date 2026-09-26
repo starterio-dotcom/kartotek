@@ -1,8 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from './kliens';
+import { api, getLapozott } from './kliens';
 import type {
   Alkalmazas,
+  AuditLista,
   Elem,
+  ElemOsszegzo,
   ElemKapcsolatok,
   Felhasznalo,
   HatasRiport,
@@ -38,6 +40,27 @@ export function useSzolgaltatasok(opts: { enabled?: boolean } = {}) {
   });
 }
 
+export interface AuditSzuro {
+  esemeny?: string;
+  felhasznalo?: string;
+  tol?: string;
+  ig?: string;
+  limit: number;
+  offset: number;
+}
+
+/** Audit-napló (csak globális Admin). Minden lekérés maga is naplózódik. */
+export function useAudit(szuro: AuditSzuro, engedve: boolean) {
+  const p = new URLSearchParams();
+  for (const [k, v] of Object.entries(szuro)) if (v !== undefined && v !== '') p.set(k, String(v));
+  return useQuery({
+    queryKey: ['audit', szuro],
+    queryFn: () => api.get<AuditLista>(`/api/audit?${p.toString()}`),
+    enabled: engedve,
+    placeholderData: (elozo) => elozo, // lapozáskor ne ugráljon a táblázat
+  });
+}
+
 export function useAlkalmazasok() {
   return useQuery({ queryKey: ['alkalmazasok'], queryFn: () => api.get<Alkalmazas[]>('/api/alkalmazasok') });
 }
@@ -65,10 +88,27 @@ export function useFelhasznaloFrissites() {
   });
 }
 
+/** Elemlista, ÖSSZEGZŐ nézet (tartalom nélkül) — listázáshoz, szűréshez, számlálókhoz. */
 export function useElemek(szuro: ElemSzuro) {
   return useQuery({
-    queryKey: ['elemek', szuro],
-    queryFn: () => api.get<Elem[]>(`/api/elemek${querystring(szuro)}`),
+    queryKey: ['elemek', 'osszegzo', szuro],
+    queryFn: async () => {
+      const { adat, osszes } = await getLapozott<ElemOsszegzo>(`/api/elemek${querystring(szuro)}`);
+      return { elemek: adat, osszes };
+    },
+  });
+}
+
+/** Egy alkalmazás elemei TELJES tartalommal (dosszié) — a szerver alkalmazásra korlátozza. */
+export function useElemekTeljes(alkalmazasKod: string) {
+  return useQuery({
+    queryKey: ['elemek', 'teljes', alkalmazasKod],
+    queryFn: async () => {
+      const qs = new URLSearchParams({ alkalmazasKod, nezet: 'teljes' });
+      const { adat, osszes } = await getLapozott<Elem>(`/api/elemek?${qs.toString()}`);
+      return { elemek: adat, osszes };
+    },
+    enabled: !!alkalmazasKod,
   });
 }
 
@@ -119,6 +159,8 @@ export function useVerzioSzerkesztes(id: string, v: number) {
     leiras?: unknown;
     cimkek?: string[];
     tipusMezok?: Record<string, unknown>;
+    /** Optimista zár: a szerkesztés alapjául vett revízió. */
+    alapRevizio?: number;
   }>((be) => api.patch<Elem>(`/api/elemek/${id}/verziok/${v}`, be), id);
 }
 

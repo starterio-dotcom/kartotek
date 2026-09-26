@@ -74,6 +74,31 @@ export async function elemLetrehozas(
   }
 }
 
+export type ListaNezet = 'osszegzo' | 'teljes';
+
+/** Egy kérésben legfeljebb ennyi elem jöhet — összegző, ill. teljes (tartalommal) nézetben. */
+export const OSSZEGZO_MAX = 5000;
+export const TELJES_MAX = 500;
+
+/**
+ * Az összegző nézet mezői: a listázáshoz, szűréshez, számlálókhoz elég. A tartalom
+ * (leírás, típusmezők), a napló, a mellékletek és a megjegyzések kimaradnak — ezek
+ * teszik ki a méret zömét; az elem-részlet (GET /api/elemek/:id) adja őket.
+ */
+const OSSZEGZO_MEZOK = {
+  kulcs: 1,
+  tipusKod: 1,
+  alkalmazasKod: 1,
+  retegKod: 1,
+  cimkek: 1,
+  'verziok.verzioSzam': 1,
+  'verziok.statusz': 1,
+  'verziok.cim': 1,
+  'verziok.hatalyKezdet': 1,
+  'verziok.hatalyVeg': 1,
+  'verziok.letrehozva': 1,
+} as const;
+
 export interface ElemSzuro {
   alkalmazasKod?: string;
   tipusKod?: TipusKod;
@@ -83,15 +108,35 @@ export interface ElemSzuro {
   kereses?: string;
   /** A felhasználó által látható alkalmazáskódok (olvasási hatókör). */
   lathatoAlkalmazasok?: string[] | 'mind';
+  /** Összegző (alap) vagy teljes tartalmú nézet; a teljes csak alkalmazásra szűrve. */
+  nezet?: ListaNezet;
+  limit?: number;
+  offset?: number;
 }
 
-/** Elemlista szűrőkkel + kereséssel; az olvasási hatókör érvényesítve. */
-export async function elemLista(szuro: ElemSzuro): Promise<Record<string, unknown>[]> {
+export interface ElemListaEredmeny {
+  elemek: Record<string, unknown>[];
+  /** A szűrésnek megfelelő összes elem (a lapozástól függetlenül). */
+  osszes: number;
+}
+
+/** Elemlista szűrőkkel + kereséssel, lapozva; az olvasási hatókör érvényesítve. */
+export async function elemLista(szuro: ElemSzuro): Promise<ElemListaEredmeny> {
+  const nezet: ListaNezet = szuro.nezet ?? 'osszegzo';
+  if (nezet === 'teljes' && !szuro.alkalmazasKod)
+    throw hiba400('A teljes tartalmú lista csak egy alkalmazásra szűrve kérhető (alkalmazasKod).');
+  const max = nezet === 'teljes' ? TELJES_MAX : OSSZEGZO_MAX;
+  const limit = Math.min(szuro.limit ?? max, max);
+  const offset = szuro.offset ?? 0;
+
   const q: Record<string, unknown> = {};
   if (szuro.alkalmazasKod) q.alkalmazasKod = szuro.alkalmazasKod;
   if (szuro.tipusKod) q.tipusKod = szuro.tipusKod;
   if (szuro.retegKod) q.retegKod = szuro.retegKod;
   if (szuro.cimke) q.cimkek = szuro.cimke;
+  // Státusz: van-e ilyen státuszú verzió — a DB-ben szűrve (index), így a lapozás és a
+  // számlálás is helyes (a korábbi memóriabeli utószűrés a teljes halmazt töltötte be).
+  if (szuro.statusz) q['verziok.statusz'] = szuro.statusz;
 
   // Olvasási hatókör: csak a látható alkalmazások elemei.
   if (szuro.lathatoAlkalmazasok && szuro.lathatoAlkalmazasok !== 'mind') {
@@ -107,17 +152,10 @@ export async function elemLista(szuro: ElemSzuro): Promise<Record<string, unknow
     q.$or = [{ kulcs: r }, { 'verziok.cim': r }, { 'verziok.leirasMd': r }, { cimkek: r }];
   }
 
-  const docs = await Elem.find(q).sort({ kulcs: 1 }).lean();
-  let talalat = docs.map(elemValasz);
-
-  // Státuszszűrő: van-e a megadott státuszú verzió (post-szűrés a beágyazás miatt).
-  if (szuro.statusz) {
-    const st = szuro.statusz;
-    talalat = talalat.filter((e) =>
-      (e.verziok as { statusz: Statusz }[]).some((v) => v.statusz === st),
-    );
-  }
-  return talalat;
+  const lekerdezes = Elem.find(q).sort({ kulcs: 1, _id: 1 }).skip(offset).limit(limit);
+  if (nezet === 'osszegzo') lekerdezes.select(OSSZEGZO_MEZOK);
+  const [docs, osszes] = await Promise.all([lekerdezes.lean(), Elem.countDocuments(q)]);
+  return { elemek: docs.map((d) => elemValasz(d as Record<string, unknown>)), osszes };
 }
 
 /** Egy elem részletei (verziók + napló + melléklet + megjegyzés). */

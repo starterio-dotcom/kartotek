@@ -45,6 +45,8 @@ export interface Verzio {
   fagyasztva?: string | null;
   letrehozva: string;
   modositottaId: string;
+  /** Tartalmi revízió (optimista zár): a mentés ezt küldi vissza `alapRevizio`-ként. */
+  revizio?: number;
   kiadasIds?: string[];
   statusznaplo: Naplo[];
   mellekletek: Melleklet[];
@@ -157,4 +159,38 @@ export interface KiadasVerzio {
 export interface KiadasTartalom {
   kiadas: Kiadas;
   verziok: KiadasVerzio[];
+}
+
+/** Az elemlista összegző nézetének verziója (tartalom, napló, mellékletek nélkül). */
+export type VerzioOsszegzo = Pick<Verzio, 'verzioSzam' | 'statusz' | 'cim' | 'hatalyKezdet' | 'hatalyVeg' | 'letrehozva'>;
+
+/** Az elemlista összegző eleme — a listázáshoz, szűréshez, számlálókhoz elég. */
+export type ElemOsszegzo = Pick<Elem, 'id' | 'kulcs' | 'tipusKod' | 'alkalmazasKod' | 'retegKod' | 'cimkek'> & {
+  verziok: VerzioOsszegzo[];
+};
+
+export interface AuditBejegyzes {
+  id: string;
+  idopont: string;
+  esemeny: 'modositas' | 'hozzaferes-megtagadva' | 'olvasas';
+  felhasznaloId: string | null;
+  email: string | null;
+  nev: string | null;
+  ip: string;
+  metodus: string;
+  utvonal: string;
+  ut: string;
+  parameterek: Record<string, string>;
+  elemId: string | null;
+  /** Az érintett elem beszédes kulcsa (a szerver oldja fel). */
+  elemKulcs: string | null;
+  statusz: number;
+  idotartamMs: number | null;
+}
+
+export interface AuditLista {
+  bejegyzesek: AuditBejegyzes[];
+  osszes: number;
+  limit: number;
+  offset: number;
 }

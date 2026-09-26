@@ -21,6 +21,8 @@ export const VerzioSzerkesztesDto = z.object({
   leiras: z.unknown().optional(), // TipTap/ProseMirror JSON
   cimkek: z.array(z.string()).optional(),
   tipusMezok: z.record(z.unknown()).optional(),
+  /** Optimista zár: a szerkesztés alapjául vett verzió-revízió. Ha közben változott → 409. */
+  alapRevizio: z.number().int().nonnegative().optional(),
 });
 export type VerzioSzerkesztes = z.infer<typeof VerzioSzerkesztesDto>;
 

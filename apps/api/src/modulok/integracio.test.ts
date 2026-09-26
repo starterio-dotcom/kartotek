@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { buildApp } from '../app.js';
 import { seedAdatbazis } from '../seed/seed.js';
-import { Elem } from '../db/modellek.js';
+import { Elem, AuditBejegyzes } from '../db/modellek.js';
 
 let replset: MongoMemoryReplSet;
 let app: FastifyInstance;
@@ -235,6 +235,195 @@ describe('véleményezési megjegyzések', () => {
     expect(megoldva.statusCode).toBe(200);
     const mj = megoldva.json().verziok[0].megjegyzesek.find((m: { mjid: string }) => m.mjid === mjid);
     expect(mj.allapot).toBe('megoldott');
+  });
+});
+
+describe('optimista zár (verzió-szerkesztés)', () => {
+  async function ujVazlat(): Promise<string> {
+    const r = await hiv('POST', '/api/elemek', {
+      mint: ANNA,
+      body: { alkalmazasKod: '3R', tipusKod: 'BUS', cim: 'Zár-teszt', leirasMd: 'x' },
+    });
+    return r.json().id as string;
+  }
+  const szerk = (id: string, body: object) =>
+    hiv('PATCH', `/api/elemek/${id}/verziok/1`, { mint: ANNA, body });
+
+  it('a revízió minden mentéssel nő; elavult alapRevizio → 409', async () => {
+    const id = await ujVazlat();
+    const elso = await szerk(id, { cim: 'A', alapRevizio: 0 });
+    expect(elso.statusCode).toBe(200);
+    expect(elso.json().verziok[0].revizio).toBe(1);
+
+    // Egy másik szerkesztő még a 0-s revízióból mentene → ütközés, nincs néma felülírás.
+    const elavult = await szerk(id, { cim: 'B', alapRevizio: 0 });
+    expect(elavult.statusCode).toBe(409);
+    expect(elavult.json().reszletek.aktualisRevizio).toBe(1);
+    const most = await hiv('GET', `/api/elemek/${id}`, { mint: ANNA });
+    expect(most.json().verziok[0].cim).toBe('A'); // az első mentés megmaradt
+
+    const friss = await szerk(id, { cim: 'C', alapRevizio: 1 });
+    expect(friss.statusCode).toBe(200);
+    expect(friss.json().verziok[0].revizio).toBe(2);
+  });
+
+  it('alapRevizio nélkül is ment (visszafelé kompatibilis)', async () => {
+    const id = await ujVazlat();
+    const r = await szerk(id, { cim: 'D' });
+    expect(r.statusCode).toBe(200);
+    expect(r.json().verziok[0].revizio).toBe(1);
+  });
+
+  it('párhuzamos mentéseknél nincs elveszett frissítés és nincs 500', async () => {
+    const id = await ujVazlat();
+    const valaszok = await Promise.all(
+      Array.from({ length: 6 }, (_, i) => szerk(id, { cim: `P${i}` })),
+    );
+    const kodok = valaszok.map((v) => v.statusCode);
+    expect(kodok.every((k) => k === 200 || k === 409)).toBe(true);
+    const sikeres = kodok.filter((k) => k === 200).length;
+    expect(sikeres).toBeGreaterThanOrEqual(1);
+    // Invariáns: minden sikeres mentés pontosan egyszer növelt — semmi nem íródott felül.
+    const vegso = await hiv('GET', `/api/elemek/${id}`, { mint: ANNA });
+    expect(vegso.json().verziok[0].revizio).toBe(sikeres);
+  });
+
+  it('két elavult példány közül a második mentése VersionError (modell-szint)', async () => {
+    const id = await ujVazlat();
+    const a = await Elem.findById(id);
+    const b = await Elem.findById(id);
+    a!.cimkek = ['a'];
+    await a!.save();
+    b!.cimkek = ['b'];
+    await expect(b!.save()).rejects.toMatchObject({ name: 'VersionError' });
+  });
+});
+
+describe('elemlista: lapozás + projekció', () => {
+  type Lista = { id: string; kulcs: string; verziok: Record<string, unknown>[] }[];
+
+  it('alapból összegző nézet: tartalom, napló, mellékletek nélkül; X-Osszes fejléccel', async () => {
+    const r = await hiv('GET', '/api/elemek', { mint: PETER });
+    expect(r.statusCode).toBe(200);
+    const elemek = r.json() as Lista;
+    expect(elemek.length).toBeGreaterThan(0);
+    expect(Number(r.headers['x-osszes'])).toBe(elemek.length);
+    const v = elemek[0]!.verziok[0]!;
+    expect(v).toHaveProperty('statusz');
+    expect(v).toHaveProperty('cim');
+    expect(v).not.toHaveProperty('leirasMd');
+    expect(v).not.toHaveProperty('statusznaplo');
+    expect(v).not.toHaveProperty('mellekletek');
+  });
+
+  it('a teljes nézet csak alkalmazásra szűrve kérhető, és jóval nagyobb', async () => {
+    expect((await hiv('GET', '/api/elemek?nezet=teljes', { mint: PETER })).statusCode).toBe(400);
+    const teljes = await hiv('GET', '/api/elemek?nezet=teljes&alkalmazasKod=3R', { mint: PETER });
+    expect(teljes.statusCode).toBe(200);
+    expect((teljes.json() as Lista)[0]!.verziok[0]).toHaveProperty('leirasMd');
+    const osszegzo = await hiv('GET', '/api/elemek?alkalmazasKod=3R', { mint: PETER });
+    // A tartalom a méret zöme: az összegző lista töredéke a teljesnek.
+    expect(osszegzo.body.length).toBeLessThan(teljes.body.length / 2);
+  });
+
+  it('a lapozás stabil és diszjunkt oldalakat ad', async () => {
+    const osszes = Number((await hiv('GET', '/api/elemek', { mint: PETER })).headers['x-osszes']);
+    const elso = (await hiv('GET', '/api/elemek?limit=2&offset=0', { mint: PETER })).json() as Lista;
+    const masodik = await hiv('GET', '/api/elemek?limit=2&offset=2', { mint: PETER });
+    const m = masodik.json() as Lista;
+    expect(elso).toHaveLength(2);
+    expect(Number(masodik.headers['x-osszes'])).toBe(osszes); // az összes a lapozástól független
+    const elsoIdk = new Set(elso.map((e) => e.id));
+    expect(m.every((e) => !elsoIdk.has(e.id))).toBe(true);
+    expect(elso[1]!.kulcs.localeCompare(m[0]!.kulcs)).toBeLessThanOrEqual(0); // kulcs szerint rendezett
+  });
+
+  it('a státusz-szűrő a DB-ben fut, és az összes is erre vonatkozik', async () => {
+    const r = await hiv('GET', '/api/elemek?statusz=Hat%C3%A1lyos', { mint: PETER });
+    const elemek = r.json() as Lista;
+    expect(elemek.length).toBeGreaterThan(0);
+    expect(Number(r.headers['x-osszes'])).toBe(elemek.length);
+    expect(elemek.every((e) => e.verziok.some((v) => v.statusz === 'Hatályos'))).toBe(true);
+  });
+});
+
+describe('audit-napló', () => {
+  async function naplo() {
+    await app.auditFlush();
+    return AuditBejegyzes.find().sort({ idopont: 1, _id: 1 }).lean();
+  }
+
+  it('a módosítást a felhasználóval és eredménnyel rögzíti', async () => {
+    await AuditBejegyzes.deleteMany({});
+    const r = await hiv('POST', '/api/elemek', {
+      mint: ANNA,
+      body: { alkalmazasKod: '3R', tipusKod: 'BUS', cim: 'Audit-teszt', leirasMd: 'x' },
+    });
+    expect(r.statusCode).toBe(201);
+    const [b] = await naplo();
+    expect(b).toMatchObject({
+      esemeny: 'modositas',
+      email: ANNA,
+      metodus: 'POST',
+      utvonal: '/api/elemek',
+      statusz: 201,
+    });
+    expect(b!.ip).toBeTruthy();
+  });
+
+  it('az elutasított hozzáférést (403, 401) rögzíti — névtelenül is', async () => {
+    await AuditBejegyzes.deleteMany({});
+    const id = await idByKulcs('3R-BUS-002');
+    expect((await hiv('GET', `/api/elemek/${id}`, { mint: DORA })).statusCode).toBe(403);
+    expect((await hiv('GET', '/api/elemek')).statusCode).toBe(401);
+    const bejegyzesek = await naplo();
+    expect(bejegyzesek).toHaveLength(2);
+    expect(bejegyzesek[0]).toMatchObject({
+      esemeny: 'hozzaferes-megtagadva',
+      email: DORA,
+      elemId: id,
+      statusz: 403,
+    });
+    expect(bejegyzesek[1]).toMatchObject({ esemeny: 'hozzaferes-megtagadva', felhasznaloId: null, statusz: 401 });
+  });
+
+  it('az érzékeny olvasást naplózza, a közönséges listát és a /health-et nem', async () => {
+    await AuditBejegyzes.deleteMany({});
+    const id = await idByKulcs('3R-BUS-002');
+    expect((await hiv('GET', `/api/elemek/${id}`, { mint: ANNA })).statusCode).toBe(200);
+    expect((await hiv('GET', '/api/elemek', { mint: ANNA })).statusCode).toBe(200);
+    expect((await hiv('GET', '/api/szolgaltatasok', { mint: ANNA })).statusCode).toBe(200);
+    expect((await hiv('GET', '/health')).statusCode).toBe(200);
+    const bejegyzesek = await naplo();
+    expect(bejegyzesek).toHaveLength(1);
+    expect(bejegyzesek[0]).toMatchObject({ esemeny: 'olvasas', elemId: id, utvonal: '/api/elemek/:id' });
+  });
+
+  it('a query-stringet sosem tárolja (pl. aláírt URL sig-je)', async () => {
+    await AuditBejegyzes.deleteMany({});
+    const id = await idByKulcs('3R-BUS-002');
+    await hiv('GET', `/api/elemek/${id}?sig=TITKOS-TOKEN`, { mint: ANNA });
+    const [b] = await naplo();
+    expect(b!.ut).toBe(`/api/elemek/${id}`);
+    expect(JSON.stringify(b)).not.toContain('TITKOS-TOKEN');
+  });
+
+  it('a lekérdező végpont csak globális Adminnak elérhető, szűrhető', async () => {
+    await AuditBejegyzes.deleteMany({});
+    await hiv('POST', '/api/elemek', {
+      mint: ANNA,
+      body: { alkalmazasKod: '3R', tipusKod: 'BUS', cim: 'Szűrés', leirasMd: 'x' },
+    });
+    await app.auditFlush();
+    expect((await hiv('GET', '/api/audit', { mint: ANNA })).statusCode).toBe(403);
+
+    const r = await hiv('GET', `/api/audit?felhasznalo=${encodeURIComponent(ANNA)}&esemeny=modositas`, {
+      mint: PETER,
+    });
+    expect(r.statusCode).toBe(200);
+    const body = r.json();
+    expect(body.osszes).toBe(1);
+    expect(body.bejegyzesek[0]).toMatchObject({ email: ANNA, utvonal: '/api/elemek', statusz: 201 });
   });
 });
 
