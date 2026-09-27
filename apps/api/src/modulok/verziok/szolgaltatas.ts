@@ -2,7 +2,7 @@ import type { Jovahagyas, VerzioSzerkesztes } from '@kartotek/shared';
 import { hiba400, hiba409 } from '../../hibak.js';
 import { ellenoriz, verzioCtx, vanUjabbAktivVerzio } from '../../auth/rbac.js';
 import type { AktualisFelhasznalo } from '../../auth/plugin.js';
-import { elemBetolt, verzioKeres, naplozEsLeptet, elemValasz } from '../kozos.js';
+import { elemBetolt, verzioKeres, naplozEsLeptet, elemValasz, jogiZarolasEllenoriz } from '../kozos.js';
 
 type Valasz = Record<string, unknown>;
 
@@ -157,6 +157,7 @@ export async function elvetes(
   indoklas?: string,
 ): Promise<Valasz> {
   const { elem, v } = await leptetAlap(id, vsz, felh, 'verzió.elvetés');
+  jogiZarolasEllenoriz(elem, 'verzió.elvetés');
   naplozEsLeptet(v, 'Elvetve', felh.id, indoklas);
   await elem.save();
   return elemValasz(elem.toObject());
@@ -183,6 +184,7 @@ export async function archivalas(
   felh: AktualisFelhasznalo,
 ): Promise<Valasz> {
   const { elem, v } = await leptetAlap(id, vsz, felh, 'verzió.archiválás');
+  jogiZarolasEllenoriz(elem, 'verzió.archiválás');
   naplozEsLeptet(v, 'Archivált', felh.id);
   await elem.save();
   return elemValasz(elem.toObject());

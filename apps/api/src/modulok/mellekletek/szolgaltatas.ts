@@ -5,7 +5,7 @@ import { ellenoriz } from '../../auth/rbac.js';
 import type { AktualisFelhasznalo } from '../../auth/plugin.js';
 import type { Tarhely } from '../../tarhely/tarhely.js';
 import { Elem } from '../../db/modellek.js';
-import { elemBetolt, verzioKeres, elemValasz, ervenyesId } from '../kozos.js';
+import { elemBetolt, verzioKeres, elemValasz, ervenyesId, jogiZarolasEllenoriz } from '../kozos.js';
 
 type Valasz = Record<string, unknown>;
 
@@ -93,6 +93,7 @@ export async function mellekletTorles(
   const v = verzioKeres(elem, vsz);
   ellenoriz('melléklet.kezelés', felh, { alkalmazasKod: elem.alkalmazasKod });
   szabadModositani(v.statusz);
+  jogiZarolasEllenoriz(elem, 'melléklet.törlés');
 
   const idx = v.mellekletek.findIndex((x) => x.mid === mid);
   if (idx < 0) throw hiba404('Melléklet nem található.');

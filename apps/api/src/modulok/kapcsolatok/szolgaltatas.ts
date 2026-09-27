@@ -11,7 +11,7 @@ import {
 import { Elem, Kapcsolat } from '../../db/modellek.js';
 import { hiba400, hiba403, hiba404, hiba409 } from '../../hibak.js';
 import { ellenoriz } from '../../auth/rbac.js';
-import { ervenyesId } from '../kozos.js';
+import { ervenyesId, jogiZarolasEllenoriz } from '../kozos.js';
 import type { AktualisFelhasznalo } from '../../auth/plugin.js';
 
 /** Egy elem akkor „lezárt”, ha minden verziója végállapotban (Archivált/Elvetve). */
@@ -102,6 +102,12 @@ export async function kapcsolatTorles(id: string, felh: AktualisFelhasznalo): Pr
   if (!k) throw hiba404('Kapcsolat nem található.');
   const forras = await Elem.findById(k.forrasElemId).lean();
   ellenoriz('kapcsolat.kezelés', felh, { alkalmazasKod: forras?.alkalmazasKod });
+  // A kapcsolat a nyomonkövethetőség bizonyítéka: egyik végpont zárolása alatt sem törölhető.
+  if (forras) jogiZarolasEllenoriz(forras, 'kapcsolat.törlés');
+  if (k.celElemId) {
+    const cel = await Elem.findById(k.celElemId).select('jogiZarolas').lean();
+    if (cel) jogiZarolasEllenoriz(cel, 'kapcsolat.törlés');
+  }
   await k.deleteOne();
 }
 

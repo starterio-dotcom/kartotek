@@ -98,6 +98,30 @@ const VerzioSchema = new Schema(
 
 /* ---------- Kollekciók ---------- */
 
+/** Jogi zárolás (legal hold) aktuális állapota az elemen. */
+const JogiZarolasSchema = new Schema(
+  {
+    aktiv: { type: Boolean, required: true },
+    ok: { type: String, required: true },
+    kiId: { type: Schema.Types.ObjectId, ref: 'Felhasznalo', required: true },
+    kiNev: { type: String, default: null },
+    mikor: { type: Date, required: true },
+  },
+  { _id: false },
+);
+
+/** A zárolás elrendelésének/feloldásának append-only története. */
+const JogiZarolasNaploSchema = new Schema(
+  {
+    muvelet: { type: String, enum: ['elrendelés', 'feloldás'], required: true },
+    ok: { type: String, required: true },
+    kiId: { type: Schema.Types.ObjectId, ref: 'Felhasznalo', required: true },
+    kiNev: { type: String, default: null },
+    mikor: { type: Date, required: true },
+  },
+  { _id: false },
+);
+
 const ElemSchema = new Schema(
   {
     kulcs: { type: String, required: true, unique: true },
@@ -106,6 +130,8 @@ const ElemSchema = new Schema(
     retegKod: { type: String, enum: [...RETEG_KODOK], default: null },
     cimkek: { type: [String], default: [] },
     verziok: { type: [VerzioSchema], default: [] },
+    jogiZarolas: { type: JogiZarolasSchema, default: null },
+    jogiZarolasNaplo: { type: [JogiZarolasNaploSchema], default: [] },
   },
   // optimisticConcurrency: minden save() a __v-re szűr és növeli → két egyidejű író
   // közül a vesztes VersionError-t kap (409), sosem írja felül némán a másikat.

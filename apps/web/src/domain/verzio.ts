@@ -1,5 +1,6 @@
 import {
   elerhetoVerzioMuveletek,
+  jogiZarolasTiltja,
   VEGALLAPOTOK,
   type Muvelet,
   type Kontextus,
@@ -31,7 +32,8 @@ export function elerhetoMuveletek(
     verzio: { statusz: verzio.statusz, szerkesztoIds: szerkesztoIds(verzio) },
     vanUjabbAktivVerzio: vanUjabbAktivVerzio(elem, verzio.verzioSzam),
   };
-  return elerhetoVerzioMuveletek(ctx);
+  // Jogi zárolás alatt a lezáró műveletek (elvetés, archiválás) gombja meg sem jelenik.
+  return elerhetoVerzioMuveletek(ctx).filter((m) => !jogiZarolasTiltja(m, elem.jogiZarolas));
 }
 
 export type DialogTipus = 'nincs' | 'jovahagyas' | 'visszadobas' | 'kivezetes' | 'elvetes';

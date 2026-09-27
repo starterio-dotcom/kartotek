@@ -8,6 +8,7 @@ import { Markdown } from '../komponens/Markdown';
 import { GazdagNezet } from '../komponens/GazdagNezet';
 import { Stepper } from '../komponens/Stepper';
 import { LeptetoGombok } from './LeptetoGombok';
+import { JogiZarolasSav } from './JogiZarolasSav';
 import { Velemenyezes } from './Velemenyezes';
 import { Szerkeszto } from './Szerkeszto';
 import { Mellekletek } from './Mellekletek';
@@ -109,6 +110,7 @@ export function Kartotek() {
           </div>
         </div>
         <Stepper statusz={ver.statusz} />
+        <JogiZarolasSav elem={elem} felhasznalo={felhasznalo} />
       </div>
 
       <div className="reszlet-test">

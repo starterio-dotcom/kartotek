@@ -14,23 +14,25 @@ async function dontes(id: string): Promise<{
   dontes: TorlesDontes;
 }> {
   if (!ervenyesId(id)) throw hiba404('Elem nem található');
-  const elem = await Elem.findById(id).select('kulcs alkalmazasKod verziok.statusz').lean();
+  const elem = await Elem.findById(id).select('kulcs alkalmazasKod verziok.statusz jogiZarolas').lean();
   if (!elem) throw hiba404('Elem nem található');
   const oid = new Types.ObjectId(id);
   const [bejovo, kimeno] = await Promise.all([
     Kapcsolat.countDocuments({ celElemId: oid }),
     Kapcsolat.countDocuments({ forrasElemId: oid }),
   ]);
-  return {
-    alkalmazasKod: elem.alkalmazasKod,
-    kulcs: elem.kulcs,
-    oid,
-    dontes: torolhetoE({
-      verziok: elem.verziok.map((v) => ({ statusz: v.statusz })),
-      bejovoKapcsolatok: bejovo,
-      kimenoKapcsolatok: kimeno,
-    }),
-  };
+  const alap = torolhetoE({
+    verziok: elem.verziok.map((v) => ({ statusz: v.statusz })),
+    bejovoKapcsolatok: bejovo,
+    kimenoKapcsolatok: kimeno,
+  });
+  // Jogi zárolás alatt a törlés akkor sem engedett, ha a domain-szabály egyébként engedné.
+  const zarolas = elem.jogiZarolas;
+  const dontes: TorlesDontes = zarolas?.aktiv
+    ? // az elvetés/archiválás is tiltott zárolás alatt → nincs ajánlható alternatíva
+      { torolheto: false, okok: [...alap.okok, `Jogi zárolás alatt: ${zarolas.ok}`], ajanlott: null }
+    : alap;
+  return { alkalmazasKod: elem.alkalmazasKod, kulcs: elem.kulcs, oid, dontes };
 }
 
 export interface TorlesElokeszites extends TorlesDontes {

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { szabad } from '@kartotek/shared';
+import { szabad, jogiZarolasTiltja } from '@kartotek/shared';
 import { api, feltoltFajl, ApiHiba } from '../api/kliens';
 import { useAuth } from '../allapot/auth';
 import { Hiba } from '../komponens/ui';
@@ -17,6 +17,9 @@ export function Mellekletek({ elem, verzio }: { elem: Elem; verzio: Verzio }) {
     verzio.statusz === 'Vázlat' &&
     !!felhasznalo &&
     szabad('melléklet.kezelés', { felhasznalo, alkalmazasKod: elem.alkalmazasKod });
+
+  // Zárolás alatt a feltöltés mehet (tartalmi munka), a törlés nem.
+  const torolheto = kezelheto && !jogiZarolasTiltja('melléklet.törlés', elem.jogiZarolas);
 
   const utvonal = `/api/elemek/${elem.id}/verziok/${verzio.verzioSzam}/mellekletek`;
   const frissit = () => void qc.invalidateQueries({ queryKey: ['elem', elem.id] });
@@ -66,7 +69,7 @@ export function Mellekletek({ elem, verzio }: { elem: Elem; verzio: Verzio }) {
               ↗
             </a>
           )}
-          {kezelheto && (
+          {torolheto && (
             <button className="kapcs-torol" title="Törlés" disabled={torles.isPending} onClick={() => torles.mutate(m.mid)}>
               ✕
             </button>

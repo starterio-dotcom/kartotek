@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { szabad, KAPCSOLAT_FAJTAK, type KapcsolatFajta } from '@kartotek/shared';
+import { szabad, jogiZarolasTiltja, KAPCSOLAT_FAJTAK, type KapcsolatFajta } from '@kartotek/shared';
 import { useElemek, useKapcsolatLetrehozas, useKapcsolatTorles } from '../api/hooks';
 import { Modal, Hiba } from '../komponens/ui';
 import { ApiHiba } from '../api/kliens';
@@ -26,6 +26,8 @@ export function KapcsolatSzerk({
   }, [osszesElem]);
 
   const kezelheto = szabad('kapcsolat.kezelés', { felhasznalo, alkalmazasKod: elem.alkalmazasKod });
+  // Zárolás alatt új kapcsolat felvehető, a meglévő (bizonyíték) nem törölhető.
+  const torolheto = kezelheto && !jogiZarolasTiltja('kapcsolat.törlés', elem.jogiZarolas);
 
   if (!kapcsolatok) return <div className="torzs"><span className="ures">Betöltés…</span></div>;
   const { kimeno, bejovo } = kapcsolatok;
@@ -54,7 +56,7 @@ export function KapcsolatSzerk({
                 ) : (
                   <span className="kapcs-kulso">{celCimke(k)}</span>
                 )}
-                {kezelheto && (
+                {torolheto && (
                   <button
                     className="kapcs-torol"
                     title="Kapcsolat törlése"

@@ -403,6 +403,62 @@ describe('elemlista: lapozás + projekció', () => {
   });
 });
 
+describe('jogi zárolás (legal hold)', () => {
+  const OK = 'Hatósági megkeresés 2026/17';
+  const zarol = (id: string, aktiv: boolean, mint = PETER) =>
+    hiv('POST', `/api/elemek/${id}/jogi-zarolas`, { mint, body: { aktiv, ok: OK } });
+  const ujVazlat = async () =>
+    (
+      await hiv('POST', '/api/elemek', {
+        mint: ANNA,
+        body: { alkalmazasKod: '3R', tipusKod: 'BUS', cim: 'Zárolás-teszt', leirasMd: 'x' },
+      })
+    ).json().id as string;
+
+  it('csak globális Admin rendelheti el, indoklással; kettős elrendelés 409', async () => {
+    const id = await ujVazlat();
+    expect((await zarol(id, true, ANNA)).statusCode).toBe(403);
+    expect(
+      (await hiv('POST', `/api/elemek/${id}/jogi-zarolas`, { mint: PETER, body: { aktiv: true, ok: ' ' } }))
+        .statusCode,
+    ).toBe(400);
+    const r = await zarol(id, true);
+    expect(r.statusCode).toBe(200);
+    expect(r.json().jogiZarolas).toMatchObject({ aktiv: true, ok: OK, kiNev: 'Nagy Péter' });
+    expect(r.json().jogiZarolasNaplo).toHaveLength(1);
+    expect((await zarol(id, true)).statusCode).toBe(409);
+  });
+
+  it('zárolás alatt a lezáró/eltávolító műveletek 409, a tartalmi munka mehet; feloldás után engedett', async () => {
+    const id = await ujVazlat();
+    const k = await hiv('POST', '/api/kapcsolatok', {
+      mint: ANNA,
+      body: { forrasElemId: id, celKulsoLink: 'https://pelda.hu/rendelet', fajta: 'hivatkozik' },
+    });
+    const kid = k.json().kapcsolat.id as string;
+    expect((await zarol(id, true)).statusCode).toBe(200);
+
+    // Tartalmi munka engedett.
+    expect((await hiv('PATCH', `/api/elemek/${id}/verziok/1`, { mint: ANNA, body: { cim: 'Módosítva' } })).statusCode).toBe(200);
+
+    // Lezáró / eltávolító műveletek tiltottak.
+    expect((await hiv('POST', `/api/elemek/${id}/verziok/1/elvetes`, { mint: ANNA, body: {} })).statusCode).toBe(409);
+    expect((await hiv('DELETE', `/api/kapcsolatok/${kid}`, { mint: ANNA })).statusCode).toBe(409);
+    expect((await hiv('DELETE', `/api/elemek/${id}`, { mint: PETER })).statusCode).toBe(409);
+    const elo = (await hiv('GET', `/api/elemek/${id}/torolheto`, { mint: PETER })).json();
+    expect(elo.torolheto).toBe(false);
+    expect(elo.okok.join(' ')).toContain('Jogi zárolás');
+    expect(elo.ajanlott).toBeNull(); // az elvetés/archiválás is tiltott → nincs mit ajánlani
+
+    // Feloldás után minden újra engedett; a napló mindkét lépést őrzi.
+    const fel = await zarol(id, false);
+    expect(fel.json().jogiZarolas).toBeNull();
+    expect(fel.json().jogiZarolasNaplo.map((n: { muvelet: string }) => n.muvelet)).toEqual(['elrendelés', 'feloldás']);
+    expect((await hiv('DELETE', `/api/kapcsolatok/${kid}`, { mint: ANNA })).statusCode).toBe(204);
+    expect((await hiv('DELETE', `/api/elemek/${id}`, { mint: PETER })).statusCode).toBe(204);
+  });
+});
+
 describe('értesítések (felület + e-mail)', () => {
   type E = { id: string; esemeny: string; elemKulcs: string; uzenet: string; olvasva: string | null };
   const sajat = async (mint: string) =>

@@ -1,7 +1,7 @@
 import { Types, type HydratedDocument } from 'mongoose';
-import type { Statusz } from '@kartotek/shared';
+import { jogiZarolasTiltja, type Statusz, type ZarolasAlattTiltott } from '@kartotek/shared';
 import { Elem, type ElemDoc } from '../db/modellek.js';
-import { hiba400, hiba404 } from '../hibak.js';
+import { hiba400, hiba404, hiba409 } from '../hibak.js';
 import { tarolt } from '../tarhely/tarhely.js';
 import { alairtTartalomUtvonal } from './mellekletek/url-alairas.js';
 
@@ -17,6 +17,16 @@ export async function elemBetolt(id: string): Promise<ElemHidratalt> {
   const elem = await Elem.findById(id);
   if (!elem) throw hiba404('Elem nem található');
   return elem as ElemHidratalt;
+}
+
+/** Jogi zárolás alatt a lezáró/eltávolító művelet 409 (a szabály a shared-ben). */
+export function jogiZarolasEllenoriz(
+  elem: { jogiZarolas?: { aktiv?: boolean; ok?: string } | null },
+  muvelet: ZarolasAlattTiltott,
+): void {
+  const z = elem.jogiZarolas;
+  if (z && jogiZarolasTiltja(muvelet, { aktiv: !!z.aktiv, ok: z.ok ?? '' }))
+    throw hiba409(`Az elem jogi zárolás alatt áll („${z.ok}") — ez a művelet a feloldásig nem végezhető.`);
 }
 
 /** Egy verzió kikeresése verziószám alapján. */

@@ -38,6 +38,7 @@ import { exportAdat, type ExportAdat } from '../export/adat.js';
 import { csvKeszit } from '../export/csv.js';
 import { reqifKeszit } from '../export/reqif.js';
 import { ertesitesLista, olvasottraAllit } from '../ertesites/szolgaltatas.js';
+import { jogiZarolasBeallit } from './jogizarolas/szolgaltatas.js';
 import { globalisAdminKell } from '../auth/plugin.js';
 
 const IdParam = z.object({ id: z.string() });
@@ -278,6 +279,19 @@ export async function apiRoutes(appBase: FastifyInstance): Promise<void> {
       const felh = app.bejelentkezesKell(req);
       return hatasRiport(req.params.id, lathatoAlkalmazasok(felh));
     },
+  );
+
+  /* ---------- Jogi zárolás (legal hold) — csak globális Admin ---------- */
+  app.post(
+    '/api/elemek/:id/jogi-zarolas',
+    {
+      schema: {
+        tags: ['elemek'],
+        params: IdParam,
+        body: z.object({ aktiv: z.boolean(), ok: z.string().trim().min(5, 'Az indoklás kötelező.') }),
+      },
+    },
+    async (req) => jogiZarolasBeallit(req.params.id, req.body, app.bejelentkezesKell(req)),
   );
 
   /* ---------- Verzió-életciklus ---------- */

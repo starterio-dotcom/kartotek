@@ -90,6 +90,17 @@ export const ElemSchema = z.object({
   retegKod: RetegKodSchema.nullable().default(null),
   cimkek: z.array(z.string()).default([]),
   verziok: z.array(VerzioSchema).default([]),
+  /** Jogi zárolás (legal hold) — aktív állapotban a lezáró/eltávolító műveletek tiltottak. */
+  jogiZarolas: z
+    .object({
+      aktiv: z.boolean(),
+      ok: z.string(),
+      kiId: IdSchema.optional(),
+      kiNev: z.string().nullable().optional(),
+      mikor: z.coerce.date().optional(),
+    })
+    .nullable()
+    .optional(),
 });
 
 export const KapcsolatSchema = z.object({

@@ -174,6 +174,23 @@ describe('mellékletek', () => {
     expect(hamis.statusCode).toBe(401);
   });
 
+  it('jogi zárolás alatt a melléklet nem törölhető', async () => {
+    const id = await ujVazlat();
+    const fel = await feltolt(`/api/elemek/${id}/verziok/1/mellekletek`, ANNA, PNG, 'kep.png', 'image/png');
+    const mid = fel.json().verziok[0].mellekletek[0].mid as string;
+    const zar = (aktiv: boolean) =>
+      app.inject({
+        method: 'POST',
+        url: `/api/elemek/${id}/jogi-zarolas`,
+        headers: { 'x-felhasznalo-email': PETER },
+        payload: { aktiv, ok: 'Belső vizsgálat folyamatban' },
+      });
+    expect((await zar(true)).statusCode).toBe(200);
+    expect((await hiv('DELETE', `/api/elemek/${id}/verziok/1/mellekletek/${mid}`, ANNA)).statusCode).toBe(409);
+    expect((await zar(false)).statusCode).toBe(200);
+    expect((await hiv('DELETE', `/api/elemek/${id}/verziok/1/mellekletek/${mid}`, ANNA)).statusCode).toBe(200);
+  });
+
   it('Hatályossá vált verzióra nem tölthető fel (befagyott) és fagyasztva beáll', async () => {
     const id = await ujVazlat();
     await hiv('POST', `/api/elemek/${id}/verziok/1/bekuldes`, ANNA);

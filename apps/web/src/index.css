@@ -611,6 +611,14 @@
   .felh-tabla .felh-email{font-family:var(--mono);font-size:12px;color:var(--t-halk)}
   .felh-tabla select{font-size:12.5px;padding:3px 6px}
 
+  /* ===== Jogi zárolás (legal hold) ===== */
+  .zarolas-sav{display:flex;align-items:flex-start;gap:12px;margin-top:12px;padding:11px 14px;
+    border-radius:var(--r-m);background:var(--negativ-bg);border:1px solid var(--negativ);color:var(--t-eros)}
+  .zarolas-jel{font-size:20px;line-height:1}
+  .zarolas-szoveg{flex:1;font-size:13px}
+  .zarolas-meta{font-size:12px;color:var(--t-alap);margin-top:2px}
+  .zarolas-admin{margin-top:10px}
+
   /* ===== Felületi értesítések (harang) ===== */
   .ert-wrap{position:relative}
   .ert-gomb{position:relative}

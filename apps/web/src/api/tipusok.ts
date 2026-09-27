@@ -61,6 +61,9 @@ export interface Elem {
   retegKod: RetegKod | null;
   cimkek: string[];
   verziok: Verzio[];
+  /** Jogi zárolás (legal hold): aktív állapotban a lezáró/eltávolító műveletek tiltottak. */
+  jogiZarolas?: { aktiv: boolean; ok: string; kiNev?: string | null; mikor?: string } | null;
+  jogiZarolasNaplo?: { muvelet: 'elrendelés' | 'feloldás'; ok: string; kiNev?: string | null; mikor: string }[];
 }
 
 export interface Kapcsolat {
