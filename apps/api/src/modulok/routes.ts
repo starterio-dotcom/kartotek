@@ -34,6 +34,9 @@ import { lefedettsegRiport, megfelelesRiport, hatasRiport } from './riportok/szo
 import * as kiadas from './kiadasok/szolgaltatas.js';
 import { utemezoFut } from '../utemezo/szolgaltatas.js';
 import { auditLista } from '../audit/szolgaltatas.js';
+import { exportAdat, type ExportAdat } from '../export/adat.js';
+import { csvKeszit } from '../export/csv.js';
+import { reqifKeszit } from '../export/reqif.js';
 import { globalisAdminKell } from '../auth/plugin.js';
 
 const IdParam = z.object({ id: z.string() });
@@ -551,6 +554,42 @@ export async function apiRoutes(appBase: FastifyInstance): Promise<void> {
       // Az ütemezőt csak globális Admin indíthatja kézzel (RENDSZER nevében naplóz).
       if (!felh.globalisAdmin) throw hiba403('Az ütemezőt csak globális Admin indíthatja.');
       return utemezoFut(req.body?.ma);
+    },
+  );
+
+  /* ---------- Export (CSV, ReqIF) — olvasási hatókörrel, auditálva ---------- */
+  const ExportSzuro = z.object({
+    alkalmazasKod: z.string().min(1),
+    mod: z.enum(['hatalyos', 'legujabb']).default('legujabb'),
+  });
+  const fajlnev = (adat: ExportAdat, kiterjesztes: string) =>
+    `kartotek-${adat.alkalmazas.kod.replace(/[^A-Za-z0-9_-]/g, '_')}-${adat.mod}-${adat.generalva
+      .toISOString()
+      .slice(0, 10)}.${kiterjesztes}`;
+
+  app.get(
+    '/api/export/csv',
+    { schema: { tags: ['export'], querystring: ExportSzuro } },
+    async (req, reply) => {
+      const felh = app.bejelentkezesKell(req);
+      const adat = await exportAdat(req.query.alkalmazasKod, req.query.mod, lathatoAlkalmazasok(felh));
+      reply
+        .header('Content-Type', 'text/csv; charset=utf-8')
+        .header('Content-Disposition', `attachment; filename="${fajlnev(adat, 'csv')}"`);
+      return csvKeszit(adat);
+    },
+  );
+
+  app.get(
+    '/api/export/reqif',
+    { schema: { tags: ['export'], querystring: ExportSzuro } },
+    async (req, reply) => {
+      const felh = app.bejelentkezesKell(req);
+      const adat = await exportAdat(req.query.alkalmazasKod, req.query.mod, lathatoAlkalmazasok(felh));
+      reply
+        .header('Content-Type', 'application/xml; charset=utf-8')
+        .header('Content-Disposition', `attachment; filename="${fajlnev(adat, 'reqif')}"`);
+      return reqifKeszit(adat);
     },
   );
 

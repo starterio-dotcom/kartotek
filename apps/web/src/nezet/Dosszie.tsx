@@ -5,6 +5,7 @@ import { useElemekTeljes, useGraf, useAlkalmazasok, useSzolgaltatasok } from '..
 import { Betolto, Hiba } from '../komponens/ui';
 import { GazdagNezet } from '../komponens/GazdagNezet';
 import { Markdown } from '../komponens/Markdown';
+import { letoltes } from '../api/kliens';
 import type { Elem, Verzio } from '../api/tipusok';
 
 const TIPUS_NEV: Record<TipusKod, string> = {
@@ -265,6 +266,22 @@ export function Dosszie() {
   const alk = params.get('alk') ?? '';
   const [mod, setMod] = useState<Mod>('hatalyos');
   const [csukott, setCsukott] = useState<Set<string>>(new Set());
+  const [letoltesFolyik, setLetoltesFolyik] = useState<'csv' | 'reqif' | null>(null);
+  const [exportHiba, setExportHiba] = useState<string | null>(null);
+
+  // Az export a képernyőn látható móddal (hatályos/legújabb) egyező tartalmat adja.
+  const exportal = async (formatum: 'csv' | 'reqif') => {
+    setLetoltesFolyik(formatum);
+    setExportHiba(null);
+    try {
+      const qs = new URLSearchParams({ alkalmazasKod: alk, mod });
+      await letoltes(`/api/export/${formatum}?${qs.toString()}`, `kartotek-${alk}.${formatum}`);
+    } catch (e) {
+      setExportHiba((e as Error).message);
+    } finally {
+      setLetoltesFolyik(null);
+    }
+  };
 
   const { data: alkalmazasok } = useAlkalmazasok();
   const { data: szolgaltatasok } = useSzolgaltatasok();
@@ -350,8 +367,25 @@ export function Dosszie() {
             <button className="gomb masodlagos" onClick={() => window.print()}>
               ⎙ Nyomtatás / PDF
             </button>
+            <button
+              className="gomb masodlagos"
+              disabled={!!letoltesFolyik}
+              title="Táblázatkezelőbe (Excel): egy elem = egy sor, a lebontás sorrendjében"
+              onClick={() => exportal('csv')}
+            >
+              ⬇ CSV
+            </button>
+            <button
+              className="gomb masodlagos"
+              disabled={!!letoltesFolyik}
+              title="ReqIF (OMG szabvány) — követelménykezelőkbe (DOORS, Polarion, Jama…) importálható"
+              onClick={() => exportal('reqif')}
+            >
+              ⬇ ReqIF
+            </button>
           </div>
         </div>
+        {exportHiba && <Hiba uzenet={exportHiba} />}
 
         <div className="d-osszegzo">
           <div className="d-stat">

@@ -81,6 +81,28 @@ export async function tartalomFetch(utvonal: string): Promise<Response> {
   return fetch(`${API_URL}${utvonal}`, { headers: { ...authFejlec() } });
 }
 
+/**
+ * Hitelesített fájlletöltés (export): a végpont auth-fejlécet kér, ezért egy sima
+ * <a href> nem működne — fetch → blob → ideiglenes letöltő link. A fájlnevet a
+ * szerver Content-Disposition fejléce adja.
+ */
+export async function letoltes(utvonal: string, tartalekNev: string): Promise<void> {
+  const res = await fetch(`${API_URL}${utvonal}`, { headers: { ...authFejlec() } });
+  if (!res.ok) {
+    const adat = await res.json().catch(() => undefined);
+    throw new ApiHiba(res.status, (adat && adat.hiba) || `Hiba (${res.status})`);
+  }
+  const nev = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? tartalekNev;
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nev;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export function apiUrl(utvonal: string): string {
   return `${API_URL}${utvonal}`;
 }

@@ -47,7 +47,7 @@ export async function buildApp(opts: AppOpciok = {}): Promise<FastifyInstance> {
     origin: config.corsOrigin ?? (config.eles ? false : true),
     credentials: true,
     // A lapozás összesítő fejléce kereszt-originű (dev) kliensnek is olvasható legyen.
-    exposedHeaders: ['X-Osszes'],
+    exposedHeaders: ['X-Osszes', 'Content-Disposition'],
   });
   await app.register(multipart, { limits: { fileSize: 20 * 1024 * 1024 } }); // 20 MB
   await app.register(biztonsagPlugin, {

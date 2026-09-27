@@ -400,6 +400,46 @@ describe('elemlista: lapozás + projekció', () => {
   });
 });
 
+describe('export (CSV, ReqIF)', () => {
+  it('CSV: letölthető, BOM-os, hatókörös; minden elem egy sor', async () => {
+    const r = await hiv('GET', '/api/export/csv?alkalmazasKod=3R', { mint: ANNA });
+    expect(r.statusCode).toBe(200);
+    expect(r.headers['content-type']).toContain('text/csv');
+    expect(r.headers['content-disposition']).toMatch(/attachment; filename="kartotek-3R-legujabb-\d{4}-\d{2}-\d{2}\.csv"/);
+    expect(r.body.startsWith('﻿Kulcs;')).toBe(true);
+    const osszes = Number((await hiv('GET', '/api/elemek?alkalmazasKod=3R', { mint: ANNA })).headers['x-osszes']);
+    expect(r.body.trim().split('\r\n')).toHaveLength(1 + osszes);
+    expect(r.body).toContain('3R-BUS-001');
+  });
+
+  it('hatályos módban csak a Hatályos verzióval bíró elemek', async () => {
+    const leg = (await hiv('GET', '/api/export/csv?alkalmazasKod=3R', { mint: ANNA })).body;
+    const hat = (await hiv('GET', '/api/export/csv?alkalmazasKod=3R&mod=hatalyos', { mint: ANNA })).body;
+    const sorok = (s: string) => s.trim().split('\r\n').length - 1;
+    expect(sorok(hat)).toBeLessThan(sorok(leg));
+    expect(hat.trim().split('\r\n').slice(1).every((s) => s.includes(';Hatályos;'))).toBe(true);
+  });
+
+  it('ReqIF: minden elem SPEC-OBJECT, a lebontás hierarchia, a belső kapcsolatok relációk', async () => {
+    const r = await hiv('GET', '/api/export/reqif?alkalmazasKod=3R', { mint: ANNA });
+    expect(r.statusCode).toBe(200);
+    expect(r.headers['content-type']).toContain('application/xml');
+    const xml = r.body;
+    expect(xml).toContain('<REQ-IF xmlns="http://www.omg.org/spec/ReqIF/20110401/reqif.xsd"');
+    const csv = (await hiv('GET', '/api/export/csv?alkalmazasKod=3R', { mint: ANNA })).body;
+    const elemDb = csv.trim().split('\r\n').length - 1;
+    expect([...xml.matchAll(/<SPEC-OBJECT /g)]).toHaveLength(elemDb);
+    expect([...xml.matchAll(/<SPEC-HIERARCHY /g)]).toHaveLength(elemDb); // mindenki pontosan egyszer
+    expect(xml).toContain('LONG-NAME="lebontja"');
+  });
+
+  it('idegen alkalmazás exportja 403, ismeretlené 404, bejelentkezés nélkül 401', async () => {
+    expect((await hiv('GET', '/api/export/csv?alkalmazasKod=Terminus', { mint: ANNA })).statusCode).toBe(403);
+    expect((await hiv('GET', '/api/export/reqif?alkalmazasKod=NINCS', { mint: PETER })).statusCode).toBe(404);
+    expect((await hiv('GET', '/api/export/csv?alkalmazasKod=3R')).statusCode).toBe(401);
+  });
+});
+
 describe('teljes szövegű keresés', () => {
   type Lista = { id: string; kulcs: string }[];
   const keres = async (mint: string, szo: string) =>

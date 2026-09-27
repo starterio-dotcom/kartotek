@@ -23,6 +23,8 @@ function erzekenyOlvasas(utvonal: string, query: unknown): boolean {
     case '/api/kiadasok/:id/tartalom':
     case '/api/felhasznalok':
     case '/api/audit':
+    case '/api/export/csv':
+    case '/api/export/reqif':
       return true;
     case '/api/elemek':
       // A teljes tartalmú (dosszié/export jellegű) lista érzékeny; az összegző lista nem.
