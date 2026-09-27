@@ -18,6 +18,7 @@ beforeAll(async () => {
   await mongoose.connect(replset.getUri(), { directConnection: true });
   app = await buildApp();
   await app.ready();
+  await Elem.init(); // az indexek (köztük a text index) felépülésének bevárása
 }, 120_000);
 
 afterAll(async () => {
@@ -396,6 +397,60 @@ describe('elemlista: lapozás + projekció', () => {
     expect(elemek.length).toBeGreaterThan(0);
     expect(Number(r.headers['x-osszes'])).toBe(elemek.length);
     expect(elemek.every((e) => e.verziok.some((v) => v.statusz === 'Hatályos'))).toBe(true);
+  });
+});
+
+describe('teljes szövegű keresés', () => {
+  type Lista = { id: string; kulcs: string }[];
+  const keres = async (mint: string, szo: string) =>
+    ((await hiv('GET', `/api/elemek?kereses=${encodeURIComponent(szo)}`, { mint })).json() as Lista).map(
+      (e) => e.kulcs,
+    );
+
+  it('a leírás tartalmában is keres (nem csak kulcs/cím/címke)', async () => {
+    // „hostess" csak a 3R-BUS-001 részletes leírásában szerepel
+    expect(await keres(ANNA, 'hostess')).toEqual(['3R-BUS-001']);
+  });
+
+  it('a kulcsban részszóra is illeszt (gépelés közben)', async () => {
+    const t = await keres(ANNA, '3R-BU');
+    expect(t).toContain('3R-BUS-001');
+    expect(t).toContain('3R-BUS-002');
+  });
+
+  it('a gazdag (TipTap) tartalmat mentés után megtalálja, a régi szöveget már nem', async () => {
+    const letre = await hiv('POST', '/api/elemek', {
+      mint: ANNA,
+      body: { alkalmazasKod: '3R', tipusKod: 'BUS', cim: 'Keresés-teszt', leirasMd: 'kezdeti' },
+    });
+    const id = letre.json().id as string;
+    const leiras = {
+      type: 'doc',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'A zebraszinkron modul kezeli.' }] }],
+    };
+    expect((await hiv('PATCH', `/api/elemek/${id}/verziok/1`, { mint: ANNA, body: { leiras } })).statusCode).toBe(200);
+    expect(await keres(ANNA, 'zebraszinkron')).toContain(letre.json().kulcs);
+    expect(await keres(ANNA, 'kezdeti')).not.toContain(letre.json().kulcs);
+  });
+
+  it('a hatókörön kívüli találat nem jön vissza', async () => {
+    expect(await keres(DORA, 'hostess')).toEqual([]); // Dóra a 3R-t nem olvashatja
+  });
+
+  it('a pótlás a mező nélküli régi verziókat kereshetővé teszi', async () => {
+    const id = await idByKulcs('3R-BUS-001');
+    await Elem.collection.updateOne(
+      { _id: new mongoose.Types.ObjectId(id) },
+      { $unset: { 'verziok.$[].keresoSzoveg': '' } },
+    );
+    const { keresoSzovegPotlas } = await import('../db/migraciok.js');
+    expect(await keresoSzovegPotlas(app.log)).toBeGreaterThanOrEqual(1);
+    expect(await keres(ANNA, 'hostess')).toEqual(['3R-BUS-001']);
+  });
+
+  it('nem látható alkalmazásra szűrve üres (nem a többi alkalmazás elemei)', async () => {
+    const r = await hiv('GET', '/api/elemek?alkalmazasKod=Terminus', { mint: ANNA });
+    expect(r.json()).toEqual([]);
   });
 });
 

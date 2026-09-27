@@ -97,6 +97,7 @@ export function useElemek(szuro: ElemSzuro) {
       const { adat, osszes } = await getLapozott<ElemOsszegzo>(`/api/elemek${querystring(szuro)}`);
       return { elemek: adat, osszes };
     },
+    placeholderData: (elozo) => elozo, // keresés közben ne villanjon üresre a lista
   });
 }
 

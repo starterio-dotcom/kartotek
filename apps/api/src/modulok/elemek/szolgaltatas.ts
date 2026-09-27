@@ -114,6 +114,38 @@ export interface ElemSzuro {
   offset?: number;
 }
 
+/** Egy keresés legfeljebb ennyi elemet jelöl ki (részhalmazonként). */
+const KERESES_MAX = 5000;
+
+/**
+ * Keresés = két részhalmaz uniója, mindkettő a hatókör-szűrővel (`alap`) együtt:
+ *  1) teljes szövegű (`$text`, magyar szótövezés, indexelt) — a tartalomban is
+ *     (a gazdag leírás szövege, rövid leírás, előfeltételek, kritériumok);
+ *  2) részszó-illesztés a RÖVID mezőkön (kulcs, cím, címke) — hogy a gépelés közbeni
+ *     „3R-BU" is találjon; a `$text` csak teljes szavakra illeszt.
+ * A hosszú tartalmat nem pásztázzuk regexszel (ez volt az audit skálázási kifogása).
+ */
+async function keresesTalalatok(kereses: string, alap: Record<string, unknown>): Promise<unknown[]> {
+  const r = new RegExp(kereses.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+  const resz = Elem.find({ ...alap, $or: [{ kulcs: r }, { 'verziok.cim': r }, { cimkek: r }] })
+    .select('_id')
+    .limit(KERESES_MAX)
+    .lean();
+  const szoveges = Elem.find({ ...alap, $text: { $search: kereses, $language: 'hungarian' } })
+    .select('_id')
+    .limit(KERESES_MAX)
+    .lean()
+    .catch(async (err: { code?: number }) => {
+      // A text index még épül (első indulás) → lassú, de helyes tartalék a kereső-szövegen.
+      if (err.code !== 27) throw err;
+      return Elem.find({ ...alap, 'verziok.keresoSzoveg': r }).select('_id').limit(KERESES_MAX).lean();
+    });
+  const [a, b] = await Promise.all([resz, szoveges]);
+  const idk = new Map<string, unknown>();
+  for (const d of [...a, ...b]) idk.set(String(d._id), d._id);
+  return [...idk.values()];
+}
+
 export interface ElemListaEredmeny {
   elemek: Record<string, unknown>[];
   /** A szűrésnek megfelelő összes elem (a lapozástól függetlenül). */
@@ -138,19 +170,17 @@ export async function elemLista(szuro: ElemSzuro): Promise<ElemListaEredmeny> {
   // számlálás is helyes (a korábbi memóriabeli utószűrés a teljes halmazt töltötte be).
   if (szuro.statusz) q['verziok.statusz'] = szuro.statusz;
 
-  // Olvasási hatókör: csak a látható alkalmazások elemei.
+  // Olvasási hatókör: csak a látható alkalmazások elemei. Nem látható alkalmazásra
+  // szűrve üres a találat (nem a többi látható alkalmazás elemei).
   if (szuro.lathatoAlkalmazasok && szuro.lathatoAlkalmazasok !== 'mind') {
     const engedett = szuro.lathatoAlkalmazasok;
-    q.alkalmazasKod =
-      typeof q.alkalmazasKod === 'string' && engedett.includes(q.alkalmazasKod)
-        ? q.alkalmazasKod
-        : { $in: engedett };
+    if (typeof q.alkalmazasKod === 'string')
+      q.alkalmazasKod = engedett.includes(q.alkalmazasKod) ? q.alkalmazasKod : { $in: [] };
+    else q.alkalmazasKod = { $in: engedett };
   }
 
-  if (szuro.kereses) {
-    const r = new RegExp(szuro.kereses.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-    q.$or = [{ kulcs: r }, { 'verziok.cim': r }, { 'verziok.leirasMd': r }, { cimkek: r }];
-  }
+  const kereses = szuro.kereses?.trim();
+  if (kereses) q._id = { $in: await keresesTalalatok(kereses, q) };
 
   const lekerdezes = Elem.find(q).sort({ kulcs: 1, _id: 1 }).skip(offset).limit(limit);
   if (nezet === 'osszegzo') lekerdezes.select(OSSZEGZO_MEZOK);

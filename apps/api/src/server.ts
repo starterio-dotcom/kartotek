@@ -5,6 +5,7 @@ import { OidcProvider } from './auth/oidc-provider.js';
 import { jwksVerifikator } from './auth/oidc-verifier.js';
 import type { AuthProvider } from './auth/provider.js';
 import { utemezoIndit } from './utemezo/idozito.js';
+import { keresoSzovegPotlas } from './db/migraciok.js';
 
 /**
  * Éles indulási biztonsági ellenőrzések — fail-fast, mielőtt bármit kiszolgálnánk.
@@ -53,6 +54,8 @@ async function fo(): Promise<void> {
       try {
         await csatlakozasDb();
         app.log.info('MongoDB kapcsolat él');
+        // Egyszeri, idempotens adatpótlás a háttérben (nem tartja fel a kiszolgálást).
+        keresoSzovegPotlas(app.log).catch((err) => app.log.error({ err }, 'Migráció hiba'));
         // Az ütemezőt csak élő DB-kapcsolat után indítjuk (az elosztott zár DB-t igényel).
         utemezoIndit(app.log);
         return;

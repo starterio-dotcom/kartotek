@@ -8,6 +8,7 @@ import {
   MELLEKLET_TIPUSOK,
   MEGJEGYZES_ALLAPOTOK,
   DONTES_EREDMENYEK,
+  verzioKeresoSzoveg,
 } from '@kartotek/shared';
 import { config } from '../config.js';
 
@@ -84,6 +85,9 @@ const VerzioSchema = new Schema(
     // Tartalmi revízió: minden sikeres Vázlat-szerkesztés növeli. A kliens a szerkesztés
     // alapjául vett revíziót küldi vissza → elavult nézetből mentés 409 (nincs néma felülírás).
     revizio: { type: Number, default: 0 },
+    // Származtatott, kereshető sima szöveg (gazdag leírás → szöveg + rövid leírás,
+    // előfeltételek, kritériumok). A pre('validate') hook tartja naprakészen.
+    keresoSzoveg: { type: String, default: '' },
     statusznaplo: { type: [StatusznaploSchema], default: [] },
     mellekletek: { type: [MellekletSchema], default: [] },
     megjegyzesek: { type: [MegjegyzesSchema], default: [] },
@@ -112,6 +116,26 @@ ElemSchema.index({ cimkek: 1 });
 // A státusz-szűrő (lista, ütemező) és a kiadás-tartalom lekérdezés indexei.
 ElemSchema.index({ 'verziok.statusz': 1 });
 ElemSchema.index({ 'verziok.kiadasIds': 1 });
+// Teljes szövegű keresés (egy text index / kollekció): magyar szótövezés + stopszavak,
+// súlyozva — a kulcs- és címtalálat előbb számít, mint egy említés a tartalomban.
+ElemSchema.index(
+  { kulcs: 'text', 'verziok.cim': 'text', cimkek: 'text', 'verziok.keresoSzoveg': 'text' },
+  {
+    name: 'teljes_szoveg',
+    default_language: 'hungarian',
+    weights: { kulcs: 10, 'verziok.cim': 6, cimkek: 4, 'verziok.keresoSzoveg': 1 },
+  },
+);
+
+// A kereső-szöveg minden mentéskor újraszámolódik (a seed insertMany-je is validál),
+// így egyetlen írási útvonal sem felejtheti el. Változatlan értéket nem ír felül,
+// hogy a verzió ne jelölődjön feleslegesen módosítottnak.
+ElemSchema.pre('validate', function () {
+  for (const v of this.verziok) {
+    const uj = verzioKeresoSzoveg(v as Parameters<typeof verzioKeresoSzoveg>[0]);
+    if (v.keresoSzoveg !== uj) v.keresoSzoveg = uj;
+  }
+});
 
 const KapcsolatSchema = new Schema(
   {

@@ -64,7 +64,7 @@ export function Elrendezes() {
           <input
             className="kereso"
             type="search"
-            placeholder="Keresés kulcsra, címre, címkére"
+            placeholder="Keresés kulcsra, címre, címkére, tartalomra"
             value={params.get('q') ?? ''}
             onChange={(e) => setQ(e.target.value)}
             aria-label="Keresés"

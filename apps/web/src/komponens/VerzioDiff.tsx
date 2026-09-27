@@ -1,22 +1,6 @@
 import { diffLines, type Change } from 'diff';
+import { tiptapSzoveg } from '@kartotek/shared';
 import type { Verzio } from '../api/tipusok';
-
-/** Sima szöveg kinyerése TipTap-JSON-ból (a diffhez; a markdown önmagában is szöveg). */
-function tiptapSzoveg(doc: unknown): string {
-  const out: string[] = [];
-  const walk = (n: unknown) => {
-    if (!n || typeof n !== 'object') return;
-    const o = n as { text?: string; type?: string; content?: unknown[] };
-    if (typeof o.text === 'string') out.push(o.text);
-    if (Array.isArray(o.content)) {
-      o.content.forEach(walk);
-      if (o.type && ['paragraph', 'heading', 'listItem', 'blockquote', 'codeBlock'].includes(o.type))
-        out.push('\n');
-    }
-  };
-  walk(doc);
-  return out.join('').replace(/\n{3,}/g, '\n\n').trim();
-}
 
 function mezok(v: Verzio): Record<string, string> {
   const tm = (v.tipusMezok ?? {}) as {

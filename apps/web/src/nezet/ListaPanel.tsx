@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { TIPUS_KODOK, type Statusz } from '@kartotek/shared';
@@ -32,6 +32,16 @@ const TABOK: { kulcs: string; nev: string; statuszok: Statusz[] | null }[] = [
   { kulcs: 'lezart', nev: 'Lezárt', statuszok: ['Elavult', 'Archivált', 'Elvetve'] },
 ];
 
+/** Az érték késleltetett másolata (a keresés ne minden billentyűleütésre kérdezzen). */
+function useKesleltetett<T>(ertek: T, ms: number): T {
+  const [k, setK] = useState(ertek);
+  useEffect(() => {
+    const t = setTimeout(() => setK(ertek), ms);
+    return () => clearTimeout(t);
+  }, [ertek, ms]);
+  return k;
+}
+
 /** A listában kiemelt verzió: a legfrissebb nem-végállapotú, vagy a legmagasabb. */
 function elsodlegesVerzio(e: ElemOsszegzo): VerzioOsszegzo {
   const aktiv = e.verziok.filter((v) => !['Elvetve', 'Archivált'].includes(v.statusz));
@@ -49,7 +59,13 @@ export function ListaPanel() {
   const tab = params.get('tab') ?? '';
   const tipusHalmaz = new Set((params.get('tipus') ?? '').split(',').filter(Boolean));
 
-  const { data, isLoading, isError, error } = useElemek(alk ? { alkalmazasKod: alk } : {});
+  // A keresés a szerveren fut (kulcs/cím/címke részszóra + a tartalom teljes szövegére);
+  // késleltetve, hogy ne minden billentyűleütés legyen kérés.
+  const kereses = useKesleltetett(q.trim(), 300);
+  const { data, isLoading, isError, error } = useElemek({
+    ...(alk ? { alkalmazasKod: alk } : {}),
+    ...(kereses.length >= 2 ? { kereses } : {}),
+  });
   const elemek = data?.elemek;
   // A szerver egy kérésben korlátos számú elemet ad; ha több van, jelezzük (nincs néma csonkolás).
   const csonkolt = !!data && data.osszes > data.elemek.length;
@@ -120,8 +136,10 @@ export function ListaPanel() {
     if (tipusHalmaz.size && !tipusHalmaz.has(e.tipusKod)) return false;
     if (aktivTab.statuszok && !e.verziok.some((v) => aktivTab.statuszok!.includes(v.statusz)))
       return false;
+    // Egy karakteres keresésre (a szerver 2-től keres) helyben szűrünk a rövid mezőkön.
     if (
       q &&
+      q.trim().length < 2 &&
       !(
         e.kulcs.toLowerCase().includes(q) ||
         e.verziok.some((v) => v.cim.toLowerCase().includes(q)) ||
