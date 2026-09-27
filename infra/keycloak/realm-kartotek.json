@@ -1,8 +1,12 @@
 {
   "realm": "kartotek",
+  "displayName": "Kartoték",
   "enabled": true,
   "sslRequired": "external",
   "loginTheme": "keycloak",
+  "internationalizationEnabled": true,
+  "supportedLocales": ["hu", "en"],
+  "defaultLocale": "hu",
   "registrationAllowed": false,
   "clients": [
     {

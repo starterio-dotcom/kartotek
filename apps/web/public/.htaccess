@@ -11,6 +11,23 @@
   RewriteRule . /index.html [L]
 </IfModule>
 
+# Tömörítés: a JS/CSS/SVG szöveg kb. harmadára zsugorodik (a fő csomag ~1,8 MB → ~0,5 MB).
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain text/javascript application/javascript application/json image/svg+xml
+</IfModule>
+
+# Gyorsítótár: az /assets fájlnevei tartalom-hash-t hordoznak → „örökre" cache-elhetők.
+# Minden mást (index.html, SPA-útvonalak) mindig újra kell ellenőrizni — különben deploy
+# után a régi, már nem létező csomagokra hivatkozna a böngésző.
+<IfModule mod_headers.c>
+  <If "%{REQUEST_URI} =~ m#^/assets/#">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </If>
+  <Else>
+    Header set Cache-Control "no-cache"
+  </Else>
+</IfModule>
+
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "DENY"
