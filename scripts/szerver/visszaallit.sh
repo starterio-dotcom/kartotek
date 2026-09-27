@@ -14,7 +14,7 @@ ITT="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 
 KORNY="${1:?Használat: kartotek-visszaallit <eles|staging> [kiadás|--lista]}"
 kornyezet_betolt "$KORNY"
-JELEN="$(readlink -f "$ALAP/current")"
+JELEN="$(readlink -e "$ALAP/current")"
 mapfile -t KIADASOK < <(find "$ALAP/releases" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort)
 
 if [ "${2:-}" = "--lista" ]; then

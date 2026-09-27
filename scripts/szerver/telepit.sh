@@ -48,7 +48,7 @@ if grep -rq "localhost:3001" "$UJ/apps/web/dist/assets/"; then
   exit 1
 fi
 
-ELOZO="$(readlink -f "$ALAP/current" 2>/dev/null || true)"
+ELOZO="$(readlink -e "$ALAP/current" 2>/dev/null || true)"
 naplo "API-váltás (előző: ${ELOZO:-nincs})…"
 current_atallit "$ALAP" "$UJ"
 systemctl restart "$SZOLGALTATAS"
