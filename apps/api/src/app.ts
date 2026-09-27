@@ -78,6 +78,8 @@ export async function buildApp(opts: AppOpciok = {}): Promise<FastifyInstance> {
   const HealthValasz = z.object({
     statusz: z.literal('ok'),
     idopont: z.string(),
+    /** A futó kiadás azonosítója (deploy / visszaállítás ellenőrzéséhez). */
+    kiadas: z.string(),
     db: z.object({ readyState: z.number(), csatlakozva: z.boolean() }),
   });
 
@@ -95,6 +97,7 @@ export async function buildApp(opts: AppOpciok = {}): Promise<FastifyInstance> {
       return {
         statusz: 'ok' as const,
         idopont: new Date().toISOString(),
+        kiadas: config.kiadas,
         db: { readyState, csatlakozva: readyState === 1 },
       };
     },

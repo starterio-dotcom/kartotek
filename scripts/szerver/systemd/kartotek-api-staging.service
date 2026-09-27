@@ -1,0 +1,15 @@
+[Unit]
+Description=Kartotékrendszer API (STAGING)
+After=network.target mongod.service
+
+[Service]
+Type=simple
+User=radiatus
+WorkingDirectory=/home/radiatus/kartotek/staging/current
+EnvironmentFile=/etc/kartotek-api-staging.env
+ExecStart=/usr/bin/node apps/api/dist/server.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

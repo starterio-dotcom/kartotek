@@ -1,0 +1,6 @@
+[Unit]
+Description=Kartoték üzemi figyelő (API, Keycloak, MongoDB, lemez, mentés, TLS)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/kartotek/figyelo.sh

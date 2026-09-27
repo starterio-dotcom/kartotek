@@ -19,6 +19,7 @@ describe('GET /health', () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.statusz).toBe('ok');
+    expect(typeof body.kiadas).toBe('string');
     expect(typeof body.db.readyState).toBe('number');
     expect(typeof body.db.csatlakozva).toBe('boolean');
   });

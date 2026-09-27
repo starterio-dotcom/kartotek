@@ -10,6 +10,11 @@ import { Graf } from '../nezet/Graf';
 import { UjElemModal } from '../nezet/UjElemModal';
 import { ErtesitesHarang } from './ErtesitesHarang';
 
+/** Build-időben rögzített környezet: a staging jól láthatóan elkülönül az éles rendszertől. */
+const TESZTKORNYEZET = import.meta.env.VITE_KORNYEZET === 'staging';
+if (TESZTKORNYEZET && typeof document !== 'undefined' && !document.title.startsWith('[TESZT]'))
+  document.title = `[TESZT] ${document.title}`;
+
 /** A mai nap HELYI idő szerint (a `toISOString` UTC-je éjfél és 02:00 között a tegnapot adná). */
 function maStr() {
   return new Date().toLocaleDateString('sv-SE');
@@ -70,6 +75,11 @@ export function Elrendezes() {
       <a className="skip-link" href="#fo-tartalom">
         Ugrás a tartalomra
       </a>
+      {TESZTKORNYEZET && (
+        <div className="kornyezet-sav" role="note">
+          TESZTKÖRNYEZET — az adatok nem élesek
+        </div>
+      )}
       <header>
         <div className="brand">
           <div className="brand-jel" aria-hidden="true" />

@@ -1,6 +1,21 @@
 import 'dotenv/config';
+import { readFileSync } from 'node:fs';
 
 const eles = (process.env.NODE_ENV ?? 'development') === 'production';
+
+/**
+ * A futó kiadás azonosítója (a /health adja vissza): a telepítő szkript a kiadás
+ * gyökerébe (a szolgáltatás munkakönyvtárába) írja `KIADAS` néven — így deploy és
+ * visszaállítás után ellenőrizhető, melyik változat fut.
+ */
+function kiadasAzonosito(): string {
+  if (process.env.KIADAS) return process.env.KIADAS;
+  try {
+    return readFileSync('KIADAS', 'utf8').trim() || 'ismeretlen';
+  } catch {
+    return 'fejlesztői';
+  }
+}
 
 /**
  * A Fastify `trustProxy` értéke a TRUST_PROXY-ból. Élesben alapból csak a helyi
@@ -36,6 +51,7 @@ export const config = {
     'mongodb://localhost:27017/kartotek?replicaSet=rs0&directConnection=true',
   nodeEnv: process.env.NODE_ENV ?? 'development',
   eles,
+  kiadas: kiadasAzonosito(),
   tarhelyDir: process.env.TARHELY_DIR ?? './.tarhely',
   /** Engedélyezett CORS-originek (vesszővel). Hiányában dev: bármely; éles: tiltó. */
   corsOrigin: lista(process.env.CORS_ORIGIN),
