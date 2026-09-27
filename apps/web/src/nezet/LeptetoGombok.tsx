@@ -31,6 +31,8 @@ export function LeptetoGombok({
       qc.setQueryData(['elem', elem.id], uj);
       void qc.invalidateQueries({ queryKey: ['elemek'] });
       void qc.invalidateQueries({ queryKey: ['graf'] });
+      // A törölhetőség a státusztól függ (csak csupa-Vázlat elem törölhető) — ne maradjon elavult.
+      void qc.invalidateQueries({ queryKey: ['elem', elem.id, 'torolheto'] });
       setDialog(null);
       uzenet.siker(lepesSikerSzoveg(akcio, uj, verzio.verzioSzam));
       if (akcio === 'ujverzio') onUjVerzio?.(Math.max(...uj.verziok.map((v) => v.verzioSzam)));
