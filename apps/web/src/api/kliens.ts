@@ -41,6 +41,43 @@ export class ApiHiba extends Error {
   }
 }
 
+export const HALOZATI_HIBA = 'A szerver nem érhető el — ellenőrizd a hálózati kapcsolatot, és próbáld újra.';
+
+/** Ha a válasz nem hordoz saját üzenetet (pl. a proxy 502-es HTML-oldala), státuszfüggő magyar szöveg. */
+export function statuszSzoveg(statusz: number): string {
+  if (statusz === 401) return 'Lejárt vagy hiányzik a bejelentkezés — jelentkezz be újra.';
+  if (statusz === 403) return 'Ehhez a művelethez nincs jogosultságod.';
+  if (statusz === 404) return 'A keresett tétel nem található (lehet, hogy közben törölték).';
+  if (statusz === 413) return 'A fájl túl nagy a feltöltéshez.';
+  if (statusz === 429) return 'Túl sok kérés rövid idő alatt — várj egy kicsit, és próbáld újra.';
+  if (statusz >= 500) return `A szerver átmenetileg nem érhető el (HTTP ${statusz}) — próbáld újra pár perc múlva.`;
+  return `A kérés nem sikerült (HTTP ${statusz}).`;
+}
+
+/** fetch hálózati hibával → ApiHiba(0) magyar üzenettel („Failed to fetch" helyett). */
+async function halozat(url: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch {
+    throw new ApiHiba(0, HALOZATI_HIBA);
+  }
+}
+
+/** A válasz törzse JSON-ként; ha nem JSON (HTML-hibaoldal), a státusz alapján értelmes hiba. */
+async function jsonTorzs(res: Response): Promise<{ hiba?: string; reszletek?: unknown } & Record<string, unknown> | undefined> {
+  const szoveg = await res.text();
+  if (!szoveg) return undefined;
+  try {
+    return JSON.parse(szoveg);
+  } catch {
+    throw new ApiHiba(res.status, res.ok ? 'A szerver váratlan választ adott — próbáld újra.' : statuszSzoveg(res.status));
+  }
+}
+
+function valaszHiba(res: Response, adat: { hiba?: string; reszletek?: unknown } | undefined): ApiHiba {
+  return new ApiHiba(res.status, adat?.hiba || statuszSzoveg(res.status), adat?.reszletek);
+}
+
 async function keresValasz<T>(
   utvonal: string,
   opts: { method?: string; body?: unknown } = {},
@@ -48,7 +85,7 @@ async function keresValasz<T>(
   const fejlec: Record<string, string> = { ...authFejlec() };
   if (opts.body !== undefined) fejlec['content-type'] = 'application/json';
 
-  const res = await fetch(`${API_URL}${utvonal}`, {
+  const res = await halozat(`${API_URL}${utvonal}`, {
     method: opts.method ?? 'GET',
     headers: fejlec,
     ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}),
@@ -56,12 +93,8 @@ async function keresValasz<T>(
 
   if (res.status === 204) return { adat: undefined as T, res };
 
-  const szoveg = await res.text();
-  const adat = szoveg ? JSON.parse(szoveg) : undefined;
-  if (!res.ok) {
-    const uzenet = (adat && (adat.hiba as string)) || `Hiba (${res.status})`;
-    throw new ApiHiba(res.status, uzenet, adat?.reszletek);
-  }
+  const adat = await jsonTorzs(res);
+  if (!res.ok) throw valaszHiba(res, adat);
   return { adat: adat as T, res };
 }
 
@@ -87,11 +120,8 @@ export async function tartalomFetch(utvonal: string): Promise<Response> {
  * szerver Content-Disposition fejléce adja.
  */
 export async function letoltes(utvonal: string, tartalekNev: string): Promise<void> {
-  const res = await fetch(`${API_URL}${utvonal}`, { headers: { ...authFejlec() } });
-  if (!res.ok) {
-    const adat = await res.json().catch(() => undefined);
-    throw new ApiHiba(res.status, (adat && adat.hiba) || `Hiba (${res.status})`);
-  }
+  const res = await halozat(`${API_URL}${utvonal}`, { headers: { ...authFejlec() } });
+  if (!res.ok) throw valaszHiba(res, await jsonTorzs(res).catch(() => undefined));
   const nev = /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? tartalekNev;
   const url = URL.createObjectURL(await res.blob());
   const a = document.createElement('a');
@@ -118,10 +148,12 @@ export async function feltoltFajl<T>(
   for (const [k, v] of Object.entries(mezok)) form.append(k, v);
   const fejlec: Record<string, string> = { ...authFejlec() };
 
-  const res = await fetch(`${API_URL}${utvonal}`, { method: 'POST', headers: fejlec, body: form });
-  const szoveg = await res.text();
-  const adat = szoveg ? JSON.parse(szoveg) : undefined;
-  if (!res.ok) throw new ApiHiba(res.status, (adat && adat.hiba) || `Hiba (${res.status})`, adat?.reszletek);
+  const res = await halozat(`${API_URL}${utvonal}`, { method: 'POST', headers: fejlec, body: form });
+  const adat = await jsonTorzs(res).catch((e) => {
+    if (!res.ok) return undefined; // a hibaoldal (pl. 413) nem JSON — a státusz dönt
+    throw e;
+  });
+  if (!res.ok) throw valaszHiba(res, adat);
   return adat as T;
 }
 

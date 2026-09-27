@@ -12,6 +12,8 @@ import {
 import { useAuth } from '../allapot/auth';
 import { Betolto, Modal, Hiba } from '../komponens/ui';
 import type { Alkalmazas, ElemOsszegzo } from '../api/tipusok';
+import { hibaSzoveg } from '../api/hibaSzoveg';
+import { uzenet } from '../allapot/uzenetek';
 
 function foStatusz(e: ElemOsszegzo): Statusz {
   const v = e.verziok.reduce((a, b) => (b.verzioSzam > a.verzioSzam ? b : a), e.verziok[0]!);
@@ -140,13 +142,23 @@ function UjSzolgaltatasModal({ onBezar }: { onBezar: () => void }) {
       <input value={nev} onChange={(e) => setNev(e.target.value)} />
       <label>Leírás</label>
       <textarea value={leiras} onChange={(e) => setLeiras(e.target.value)} />
-      {m.isError && <Hiba uzenet={(m.error as Error).message} />}
+      {m.isError && <Hiba uzenet={hibaSzoveg(m.error)} />}
       <div className="modal-gombok">
         <button className="btn masodlagos" onClick={onBezar}>Mégse</button>
         <button
           className="btn"
           disabled={!kod || !nev || m.isPending}
-          onClick={() => m.mutate({ kod, nev, leiras }, { onSuccess: onBezar })}
+          onClick={() =>
+            m.mutate(
+              { kod, nev, leiras },
+              {
+                onSuccess: () => {
+                  uzenet.siker(`Szolgáltatás létrehozva: ${nev} (${kod}).`);
+                  onBezar();
+                },
+              },
+            )
+          }
         >
           Létrehozás
         </button>
@@ -168,13 +180,23 @@ function UjAlkalmazasModal({ szolgaltatasKod, onBezar }: { szolgaltatasKod: stri
       <input value={nev} onChange={(e) => setNev(e.target.value)} />
       <label>Leírás</label>
       <textarea value={leiras} onChange={(e) => setLeiras(e.target.value)} />
-      {m.isError && <Hiba uzenet={(m.error as Error).message} />}
+      {m.isError && <Hiba uzenet={hibaSzoveg(m.error)} />}
       <div className="modal-gombok">
         <button className="btn masodlagos" onClick={onBezar}>Mégse</button>
         <button
           className="btn"
           disabled={!kod || !nev || m.isPending}
-          onClick={() => m.mutate({ kod, nev, leiras, szolgaltatasKod }, { onSuccess: onBezar })}
+          onClick={() =>
+            m.mutate(
+              { kod, nev, leiras, szolgaltatasKod },
+              {
+                onSuccess: () => {
+                  uzenet.siker(`Alkalmazás létrehozva: ${nev} (${kod}) — most felveheted az első elemét.`);
+                  onBezar();
+                },
+              },
+            )
+          }
         >
           Létrehozás
         </button>
@@ -193,13 +215,23 @@ function SzerkesztAlkalmazasModal({ alk, onBezar }: { alk: Alkalmazas; onBezar: 
       <input value={nev} onChange={(e) => setNev(e.target.value)} />
       <label>Leírás</label>
       <textarea value={leiras} onChange={(e) => setLeiras(e.target.value)} />
-      {m.isError && <Hiba uzenet={(m.error as Error).message} />}
+      {m.isError && <Hiba uzenet={hibaSzoveg(m.error)} />}
       <div className="modal-gombok">
         <button className="btn masodlagos" onClick={onBezar}>Mégse</button>
         <button
           className="btn"
           disabled={m.isPending}
-          onClick={() => m.mutate({ kod: alk.kod, nev, leiras }, { onSuccess: onBezar })}
+          onClick={() =>
+            m.mutate(
+              { kod: alk.kod, nev, leiras },
+              {
+                onSuccess: () => {
+                  uzenet.siker(`Mentve: ${alk.kod}.`);
+                  onBezar();
+                },
+              },
+            )
+          }
         >
           Mentés
         </button>

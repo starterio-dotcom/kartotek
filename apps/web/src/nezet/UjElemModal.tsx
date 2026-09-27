@@ -5,7 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { TIPUS_KODOK, RETEG_KODOK, uzletiTipus, type TipusKod } from '@kartotek/shared';
 import { useAlkalmazasok, useElemLetrehozas } from '../api/hooks';
 import { Modal, Hiba } from '../komponens/ui';
-import { ApiHiba } from '../api/kliens';
+import { hibaSzoveg } from '../api/hibaSzoveg';
+import { uzenet } from '../allapot/uzenetek';
 
 const Sema = z
   .object({
@@ -46,16 +47,20 @@ export function UjElemModal({
   const uzleti = uzletiTipus(watch('tipusKod') as TipusKod);
 
   const kuld = handleSubmit(async (v) => {
-    const elem = await letrehozas.mutateAsync({
-      alkalmazasKod: v.alkalmazasKod,
-      tipusKod: v.tipusKod,
-      retegKod: uzleti ? null : (v.retegKod ?? null),
-      cim: v.cim,
-      leirasMd: v.leirasMd ?? '',
-      cimkek: v.cimkek ? v.cimkek.split(',').map((s) => s.trim()).filter(Boolean) : [],
-    });
+    const elem = await letrehozas
+      .mutateAsync({
+        alkalmazasKod: v.alkalmazasKod,
+        tipusKod: v.tipusKod,
+        retegKod: uzleti ? null : (v.retegKod ?? null),
+        cim: v.cim,
+        leirasMd: v.leirasMd ?? '',
+        cimkek: v.cimkek ? v.cimkek.split(',').map((s) => s.trim()).filter(Boolean) : [],
+      })
+      .catch(() => null); // a hiba a modálban látszik (letrehozas.error)
+    if (!elem) return;
     onBezar();
     nav(`/elem/${elem.id}`);
+    uzenet.siker(`Létrejött: ${elem.kulcs} v1 (Vázlat) — a szerkesztéssel folytathatod.`);
   });
 
   return (
@@ -103,11 +108,13 @@ export function UjElemModal({
         <label>Címkék (vesszővel)</label>
         <input type="text" {...register('cimkek')} />
 
-        {letrehozas.isError && <Hiba uzenet={(letrehozas.error as ApiHiba).message} />}
+        {letrehozas.isError && <Hiba uzenet={hibaSzoveg(letrehozas.error)} />}
 
         <div className="modal-gombok">
           <button type="button" className="btn masodlagos" onClick={onBezar}>Mégse</button>
-          <button type="submit" className="btn" disabled={letrehozas.isPending}>Létrehozás</button>
+          <button type="submit" className="btn" disabled={letrehozas.isPending}>
+            {letrehozas.isPending ? 'Létrehozás…' : 'Létrehozás'}
+          </button>
         </div>
       </form>
     </Modal>

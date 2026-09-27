@@ -45,6 +45,8 @@ export interface Verzio {
   fagyasztva?: string | null;
   letrehozva: string;
   modositottaId: string;
+  /** Minden tartalom-szerkesztő azonosítója (a négy-szem-elvhez). */
+  szerkesztok?: string[];
   /** Tartalmi revízió (optimista zár): a mentés ezt küldi vissza `alapRevizio`-ként. */
   revizio?: number;
   kiadasIds?: string[];

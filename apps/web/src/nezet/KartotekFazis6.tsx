@@ -9,6 +9,8 @@ import {
   useElemTorles,
 } from '../api/hooks';
 import { Modal, Hiba } from '../komponens/ui';
+import { hibaSzoveg } from '../api/hibaSzoveg';
+import { uzenet } from '../allapot/uzenetek';
 import type { Elem, Verzio, Felhasznalo, HatasElem } from '../api/tipusok';
 
 /* ---------- Hatáselemzés ---------- */
@@ -99,9 +101,20 @@ export function KiadasPanel({
                   type="checkbox"
                   checked={bent}
                   disabled={!kezelheto || beallit.isPending}
-                  onChange={(e) =>
-                    beallit.mutate({ v: verzio.verzioSzam, kiadasId: k.id, hozzarendel: e.target.checked })
-                  }
+                  onChange={(e) => {
+                    const hozzarendel = e.target.checked;
+                    beallit.mutate(
+                      { v: verzio.verzioSzam, kiadasId: k.id, hozzarendel },
+                      {
+                        onSuccess: () =>
+                          uzenet.siker(
+                            hozzarendel
+                              ? `${elem.kulcs} v${verzio.verzioSzam} hozzárendelve: ${k.verzio}.`
+                              : `${elem.kulcs} v${verzio.verzioSzam} kivéve a kiadásból: ${k.verzio}.`,
+                          ),
+                      },
+                    );
+                  }}
                 />
                 <span>{k.verzio}</span>
               </label>
@@ -157,19 +170,22 @@ export function VeszelyZona({ elem, felhasznalo }: { elem: Elem; felhasznalo: Fe
           <p style={{ fontSize: 13 }}>
             A(z) <b>{elem.kulcs}</b> elem és kapcsolatai véglegesen törlődnek. Ez nem vonható vissza.
           </p>
-          {torles.isError && <Hiba uzenet={(torles.error as Error).message} />}
+          {torles.isError && <Hiba uzenet={hibaSzoveg(torles.error)} />}
           <div className="modal-gombok">
             <button className="btn masodlagos" onClick={() => setMegerosit(false)}>Mégse</button>
             <button
-              className="btn"
+              className="btn veszelyes"
               disabled={torles.isPending}
               onClick={() =>
                 torles.mutate(elem.id, {
-                  onSuccess: () => nav('/'),
+                  onSuccess: () => {
+                    nav('/');
+                    uzenet.siker(`${elem.kulcs} véglegesen törölve (a kulcs nem adódik ki újra).`);
+                  },
                 })
               }
             >
-              Végleges törlés
+              {torles.isPending ? 'Törlés…' : 'Végleges törlés'}
             </button>
           </div>
         </Modal>

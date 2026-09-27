@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, ApiHiba } from '../api/kliens';
+import { api } from '../api/kliens';
+import { hibaSzoveg } from '../api/hibaSzoveg';
+import { uzenet } from '../allapot/uzenetek';
 import { Gomb, Hiba, Modal, Mezo } from '../komponens/ui';
 import type { Elem, Felhasznalo } from '../api/tipusok';
 
@@ -16,11 +18,13 @@ export function JogiZarolasSav({ elem, felhasznalo }: { elem: Elem; felhasznalo:
   const admin = felhasznalo.globalisAdmin;
 
   const valt = useMutation({
+    meta: { helyiHiba: true },
     mutationFn: () => api.post<Elem>(`/api/elemek/${elem.id}/jogi-zarolas`, { aktiv: !aktiv, ok }),
     onSuccess: (uj) => {
       qc.setQueryData(['elem', elem.id], uj);
       setNyitva(false);
       setOk('');
+      uzenet.siker(aktiv ? `Jogi zárolás feloldva: ${elem.kulcs}.` : `Jogi zárolás elrendelve: ${elem.kulcs}.`);
     },
   });
 
@@ -61,7 +65,8 @@ export function JogiZarolasSav({ elem, felhasznalo }: { elem: Elem; felhasznalo:
           <Mezo cimke="Indoklás (kötelező, naplózzuk)">
             <textarea value={ok} onChange={(e) => setOk(e.target.value)} placeholder="pl. hatósági megkeresés száma" />
           </Mezo>
-          {valt.isError && <Hiba uzenet={(valt.error as ApiHiba).message} />}
+          {ok.trim().length > 0 && ok.trim().length < 5 && <p className="mezo-sugo">Legalább 5 karakter.</p>}
+          {valt.isError && <Hiba uzenet={hibaSzoveg(valt.error)} />}
           <div className="modal-gombok">
             <Gomb onClick={() => setNyitva(false)}>Mégse</Gomb>
             <Gomb valtozat="elsodleges" disabled={ok.trim().length < 5 || valt.isPending} onClick={() => valt.mutate()}>

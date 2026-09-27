@@ -4,13 +4,32 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth, DEV_FELHASZNALOK } from '../allapot/auth';
 import { useSzolgaltatasok } from '../api/hooks';
 import { api } from '../api/kliens';
+import { uzenet } from '../allapot/uzenetek';
 import { ListaPanel } from '../nezet/ListaPanel';
 import { Graf } from '../nezet/Graf';
 import { UjElemModal } from '../nezet/UjElemModal';
 import { ErtesitesHarang } from './ErtesitesHarang';
 
+/** A mai nap HELYI idő szerint (a `toISOString` UTC-je éjfél és 02:00 között a tegnapot adná). */
 function maStr() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toLocaleDateString('sv-SE');
+}
+
+interface UtemezoEredmeny {
+  valtozas: number;
+  hatalybalepes: number;
+  elavulas: number;
+  hibas: number;
+}
+
+function utemezoSzoveg(e: UtemezoEredmeny): string {
+  if (!e.valtozas && !e.hibas) return 'Ütemező lefutott — nem volt esedékes átmenet.';
+  const reszek = [
+    e.hatalybalepes ? `${e.hatalybalepes} hatályba lépett` : '',
+    e.elavulas ? `${e.elavulas} elavult` : '',
+    e.hibas ? `${e.hibas} léptetése sikertelen (a következő futás pótolja)` : '',
+  ].filter(Boolean);
+  return `Ütemező lefutott: ${reszek.join(', ')}.`;
 }
 
 export function Elrendezes() {
@@ -27,8 +46,11 @@ export function Elrendezes() {
   const grafNezet = location.pathname === '/graf';
 
   const utemezo = useMutation({
-    mutationFn: () => api.post('/api/utemezo/futtat', { ma: maStr() }),
-    onSuccess: () => void qc.invalidateQueries(),
+    mutationFn: () => api.post<UtemezoEredmeny>('/api/utemezo/futtat', { ma: maStr() }),
+    onSuccess: (e) => {
+      void qc.invalidateQueries();
+      uzenet.siker(utemezoSzoveg(e));
+    },
   });
 
   const setQ = (q: string) => {

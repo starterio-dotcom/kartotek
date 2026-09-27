@@ -3,6 +3,8 @@ import { useEditor, EditorContent, type Editor, type JSONContent } from '@tiptap
 import { Markdown as MarkdownKiterj } from 'tiptap-markdown';
 import { useQueryClient } from '@tanstack/react-query';
 import { feltoltFajl } from '../api/kliens';
+import { hibaSzoveg } from '../api/hibaSzoveg';
+import { uzenet } from '../allapot/uzenetek';
 import { kiterjesztesek } from './tiptap-bovitmenyek';
 import { jsonAlairtSrc, jsonNyersSrc } from './melleklet-url';
 import type { Elem, Melleklet } from '../api/tipusok';
@@ -57,25 +59,42 @@ export function GazdagSzerkeszto({
   };
 
   const kepFeltolt = async (file: File) => {
-    const src = await feltolt(file);
-    if (src) c().setImage({ src }).run();
+    try {
+      const src = await feltolt(file);
+      if (src) c().setImage({ src }).run();
+    } catch (e) {
+      uzenet.hiba(`A kép nem tölthető fel (${file.name}): ${hibaSzoveg(e)}`);
+    }
   };
   const videoFeltolt = async (file: File) => {
-    const src = await feltolt(file);
-    if (src) c().insertContent({ type: 'video', attrs: { src } }).run();
+    try {
+      const src = await feltolt(file);
+      if (src) c().insertContent({ type: 'video', attrs: { src } }).run();
+    } catch (e) {
+      uzenet.hiba(`A videó nem tölthető fel (${file.name}): ${hibaSzoveg(e)}`);
+    }
   };
   const figmaBeszur = () => {
     const link = window.prompt('Figma élő link (node-id URL-kódolt kettősponttal):');
     if (link) c().insertContent({ type: 'figma', attrs: { link, alt: 'Figma terv' } }).run();
   };
   const linkBeszur = () => {
-    const url = window.prompt('Hivatkozás URL-je:');
+    const url = window.prompt('Hivatkozás URL-je (üresen hagyva a link törlődik):', editor.getAttributes('link').href ?? '');
+    if (url === null) return; // Mégse: a meglévő link marad
     if (url) c().setLink({ href: url }).run();
     else c().unsetLink().run();
   };
 
   const g = (cimke: React.ReactNode, aktiv: boolean, cim: string, hat: () => void) => (
-    <button type="button" className={aktiv ? 'aktiv' : ''} title={cim} onMouseDown={(e) => e.preventDefault()} onClick={hat}>
+    <button
+      type="button"
+      className={aktiv ? 'aktiv' : ''}
+      title={cim}
+      aria-label={cim}
+      aria-pressed={aktiv}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={hat}
+    >
       {cimke}
     </button>
   );

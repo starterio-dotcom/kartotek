@@ -3,7 +3,9 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { KAPCSOLAT_FAJTAK, type KapcsolatFajta } from '@kartotek/shared';
 import { useGraf } from '../api/hooks';
-import { api, ApiHiba } from '../api/kliens';
+import { api } from '../api/kliens';
+import { hibaSzoveg } from '../api/hibaSzoveg';
+import { uzenet } from '../allapot/uzenetek';
 import { Betolto, Hiba } from '../komponens/ui';
 import { elrendez, kornyezet, EL_STILUS, NODE_W, NODE_H, type PozCsomopont } from '../domain/graf';
 
@@ -224,21 +226,41 @@ function KijeloltPanel({
   const [fajta, setFajta] = useState<KapcsolatFajta>('lebontja');
 
   const felvesz = useMutation({
-    mutationFn: () => {
-      const body: Record<string, unknown> = { forrasElemId: kijelolt, fajta };
-      if (cel.startsWith('sz:')) body.celSzabalyzatKod = cel.slice(3);
-      else body.celElemId = cel;
-      return api.post('/api/kapcsolatok', body);
-    },
-    onSuccess: () => {
+    meta: { helyiHiba: true }, // a hiba a panelen látszik
+    mutationFn: ({ visszaallitas: _jelzo, ...body }: Record<string, unknown>) => api.post('/api/kapcsolatok', body),
+    onSuccess: (_v, body) => {
       setCel('');
       onValtozas();
+      if (!body.visszaallitas) uzenet.siker(`Kapcsolat felvéve: ${cimke(String(body.forrasElemId))} ${String(body.fajta)} → ${cimke(celId(body))}`);
     },
   });
   const torol = useMutation({
-    mutationFn: (kid: string) => api.del(`/api/kapcsolatok/${kid}`),
-    onSuccess: onValtozas,
+    mutationFn: (e: import('../domain/graf').GrafEl) => api.del(`/api/kapcsolatok/${e.id}`),
+    onSuccess: (_v, e) => {
+      onValtozas();
+      // Azonnali törlés, de visszavonható: ugyanazokkal az adatokkal újra felvesszük.
+      uzenet.siker(`Kapcsolat törölve: ${cimke(e.forras)} ${e.fajta} → ${cimke(e.cel)}`, {
+        cimke: 'Visszavonás',
+        fut: () =>
+          felvesz.mutate(
+            { forrasElemId: e.forras, fajta: e.fajta, ...celMezo(e.cel), visszaallitas: true },
+            {
+              onSuccess: () => uzenet.siker('Kapcsolat visszaállítva.'),
+              onError: (h) => uzenet.hiba(`A kapcsolat nem állítható vissza: ${hibaSzoveg(h)}`),
+            },
+          ),
+      });
+    },
   });
+  const celMezo = (id: string) =>
+    graf.szabalyzatok.includes(id) ? { celSzabalyzatKod: id } : { celElemId: id };
+  const celId = (body: Record<string, unknown>) => String(body.celElemId ?? body.celSzabalyzatKod ?? '');
+  const ujKapcsolat = () =>
+    felvesz.mutate({
+      forrasElemId: kijelolt,
+      fajta,
+      ...(cel.startsWith('sz:') ? { celSzabalyzatKod: cel.slice(3) } : { celElemId: cel }),
+    });
 
   const sajatElek = graf.elek.filter((e) => e.forras === kijelolt || e.cel === kijelolt);
   const celLista = [
@@ -264,7 +286,13 @@ function KijeloltPanel({
             {e.fajta} {e.forras === kijelolt ? '→' : '←'} {cimke(e.forras === kijelolt ? e.cel : e.forras)}
           </span>
           {elem && (
-            <button className="kapcs-torol" title="Törlés" disabled={torol.isPending} onClick={() => torol.mutate(e.id)}>
+            <button
+              className="kapcs-torol"
+              title="Törlés"
+              aria-label={`${e.fajta} kapcsolat törlése: ${cimke(e.forras)} → ${cimke(e.cel)}`}
+              disabled={torol.isPending}
+              onClick={() => torol.mutate(e)}
+            >
               ✕
             </button>
           )}
@@ -287,7 +315,7 @@ function KijeloltPanel({
               </option>
             ))}
           </select>
-          <button className="kapcs-add" disabled={!cel || felvesz.isPending} onClick={() => felvesz.mutate()}>
+          <button className="kapcs-add" disabled={!cel || felvesz.isPending} onClick={ujKapcsolat}>
             + Hozzáadás
           </button>
           {felvesz.isError && <Hiba uzenet={hibaSzoveg(felvesz.error)} />}
@@ -295,10 +323,4 @@ function KijeloltPanel({
       )}
     </>
   );
-}
-
-function hibaSzoveg(err: unknown): string {
-  const e = err as ApiHiba;
-  const reszletek = Array.isArray(e.reszletek) ? ` (${(e.reszletek as string[]).join(' ')})` : '';
-  return e.message + reszletek;
 }

@@ -6,6 +6,7 @@ import { useElemek, useAlkalmazasok } from '../api/hooks';
 import { api } from '../api/kliens';
 import { Betolto, Hiba } from '../komponens/ui';
 import type { ElemOsszegzo, VerzioOsszegzo } from '../api/tipusok';
+import { uzenet } from '../allapot/uzenetek';
 
 /* ---------- Mentett szűrők (localStorage) ---------- */
 const SZURO_KULCS = 'kartotek.mentett-szurok';
@@ -103,18 +104,24 @@ export function ListaPanel() {
   const tomegesCimke = async () => {
     const cimke = window.prompt('Az összes kijelölt elemhez hozzáadandó címke:')?.trim();
     if (!cimke) return;
+    let sikeres = 0;
+    const kimaradt: string[] = [];
     for (const eid of kijelolt) {
       const e = (elemek ?? []).find((x) => x.id === eid);
       if (!e) continue;
       const ujCimkek = [...new Set([...(e.cimkek ?? []), cimke])];
       try {
         await api.patch(`/api/elemek/${eid}/cimkek`, { cimkek: ujCimkek });
+        sikeres++;
       } catch {
-        /* jogosultság hiánya / hiba → az adott elem kimarad */
+        kimaradt.push(e.kulcs); // jogosultság hiánya / hiba → az elem kimarad, de megmondjuk
       }
     }
     await qc.invalidateQueries({ queryKey: ['elemek'] });
     valasztModVege();
+    if (sikeres) uzenet.siker(`„${cimke}” címke hozzáadva ${sikeres} elemhez.`);
+    if (kimaradt.length)
+      uzenet.hiba(`${kimaradt.length} elem kimaradt (nincs jogosultság vagy hiba): ${kimaradt.join(', ')}`);
   };
   const szuroMent = () => {
     const q = params.toString();

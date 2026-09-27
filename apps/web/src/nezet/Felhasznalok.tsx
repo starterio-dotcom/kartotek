@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { SZEREPKOROK } from '@kartotek/shared';
 import { useFelhasznalok, useAlkalmazasok, useFelhasznaloFrissites } from '../api/hooks';
 import { useAuth } from '../allapot/auth';
-import { Betolto } from '../komponens/ui';
+import { uzenet } from '../allapot/uzenetek';
+import { Betolto, Megerosites } from '../komponens/ui';
 import type { FelhasznaloListaTetel } from '../api/tipusok';
 
 /** Admin-felület a felhasználói szerepkörökhöz (tagság alkalmazásonként + globális Admin). */
@@ -10,6 +12,8 @@ export function Felhasznalok() {
   const { data: userek, isLoading } = useFelhasznalok();
   const { data: alkalmazasok } = useAlkalmazasok();
   const frissit = useFelhasznaloFrissites();
+  // A globális Admin jog minden alkalmazásra kiterjed → megerősítés kell (magunknál külön figyelmeztetés).
+  const [adminValtas, setAdminValtas] = useState<{ u: FelhasznaloListaTetel; uj: boolean } | null>(null);
 
   if (!felhasznalo?.globalisAdmin)
     return (
@@ -24,7 +28,23 @@ export function Felhasznalok() {
   const szerepValt = (u: FelhasznaloListaTetel, alkKod: string, szerep: string) => {
     const tagsagok = (u.tagsagok ?? []).filter((t) => t.alkalmazasKod !== alkKod);
     if (szerep) tagsagok.push({ alkalmazasKod: alkKod, szerepkor: szerep as never });
-    frissit.mutate({ id: u.id, tagsagok });
+    frissit.mutate(
+      { id: u.id, tagsagok },
+      { onSuccess: () => uzenet.siker(`${u.nev} — ${alkKod}: ${szerep || 'nincs tagság'}.`) },
+    );
+  };
+  const adminMent = () => {
+    if (!adminValtas) return;
+    const { u, uj } = adminValtas;
+    frissit.mutate(
+      { id: u.id, globalisAdmin: uj },
+      {
+        onSuccess: () => {
+          uzenet.siker(uj ? `${u.nev} globális Admin lett.` : `${u.nev} globális Admin joga megszűnt.`);
+          setAdminValtas(null);
+        },
+      },
+    );
   };
 
   return (
@@ -59,7 +79,7 @@ export function Felhasznalok() {
                     type="checkbox"
                     checked={u.globalisAdmin ?? false}
                     disabled={frissit.isPending}
-                    onChange={(e) => frissit.mutate({ id: u.id, globalisAdmin: e.target.checked })}
+                    onChange={(e) => setAdminValtas({ u, uj: e.target.checked })}
                     aria-label={`${u.nev} — globális Admin`}
                   />
                 </td>
@@ -88,6 +108,28 @@ export function Felhasznalok() {
           </tbody>
         </table>
       </div>
+
+      {adminValtas && (
+        <Megerosites
+          cim={adminValtas.uj ? 'Globális Admin jog adása' : 'Globális Admin jog elvétele'}
+          gombFelirat={adminValtas.uj ? 'Jog megadása' : 'Jog elvétele'}
+          veszelyes
+          folyamatban={frissit.isPending}
+          onMegse={() => setAdminValtas(null)}
+          onMegerosit={adminMent}
+        >
+          <p>
+            {adminValtas.uj
+              ? `${adminValtas.u.nev} minden alkalmazásban teljes jogot kap: szerepköröket oszthat, archiválhat, törölhet, és látja az audit-naplót.`
+              : `${adminValtas.u.nev} elveszíti a rendszerszintű jogait; ezután csak az alkalmazás-szerepkörei érvényesek.`}
+          </p>
+          {!adminValtas.uj && adminValtas.u.id === felhasznalo.id && (
+            <p>
+              <b>Ez a saját jogod.</b> Elvétele után ezt az oldalt sem éred el — csak egy másik globális Admin adhatja vissza.
+            </p>
+          )}
+        </Megerosites>
+      )}
     </>
   );
 }

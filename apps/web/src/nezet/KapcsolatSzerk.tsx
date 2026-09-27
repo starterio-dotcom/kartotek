@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { szabad, jogiZarolasTiltja, KAPCSOLAT_FAJTAK, type KapcsolatFajta } from '@kartotek/shared';
 import { useElemek, useKapcsolatLetrehozas, useKapcsolatTorles } from '../api/hooks';
 import { Modal, Hiba } from '../komponens/ui';
-import { ApiHiba } from '../api/kliens';
+import { hibaSzoveg } from '../api/hibaSzoveg';
+import { uzenet } from '../allapot/uzenetek';
 import type { Elem, ElemKapcsolatok, ElemOsszegzo, Felhasznalo, Kapcsolat } from '../api/tipusok';
 
 export function KapcsolatSzerk({
@@ -17,6 +18,7 @@ export function KapcsolatSzerk({
 }) {
   const [ujNyitva, setUjNyitva] = useState(false);
   const torles = useKapcsolatTorles(elem.id);
+  const visszaallit = useKapcsolatLetrehozas(elem.id);
   const { data: lista } = useElemek({});
   const osszesElem = lista?.elemek;
   const kulcsMap = useMemo(() => {
@@ -35,6 +37,29 @@ export function KapcsolatSzerk({
 
   const celCimke = (k: Kapcsolat) =>
     k.celElemId ? (kulcsMap.get(k.celElemId) ?? 'belső elem') : (k.celSzabalyzatKod ?? k.celKulsoLink ?? '—');
+
+  // A törlés azonnali, de a toastból visszavonható (ugyanazokkal az adatokkal újra felvesszük).
+  const torol = (k: Kapcsolat) =>
+    torles.mutate(k.id, {
+      onSuccess: () =>
+        uzenet.siker(`Kapcsolat törölve: ${k.fajta} → ${celCimke(k)}`, {
+          cimke: 'Visszavonás',
+          fut: () =>
+            visszaallit.mutate(
+              {
+                forrasElemId: elem.id,
+                fajta: k.fajta,
+                ...(k.celElemId ? { celElemId: k.celElemId } : {}),
+                ...(k.celSzabalyzatKod ? { celSzabalyzatKod: k.celSzabalyzatKod } : {}),
+                ...(k.celKulsoLink ? { celKulsoLink: k.celKulsoLink } : {}),
+              },
+              {
+                onSuccess: () => uzenet.siker(`Kapcsolat visszaállítva: ${k.fajta} → ${celCimke(k)}`),
+                onError: (e) => uzenet.hiba(`A kapcsolat nem állítható vissza: ${hibaSzoveg(e)}`),
+              },
+            ),
+        }),
+    });
 
   return (
     <>
@@ -60,8 +85,9 @@ export function KapcsolatSzerk({
                   <button
                     className="kapcs-torol"
                     title="Kapcsolat törlése"
+                    aria-label={`${f} kapcsolat törlése: ${k.csonk ? 'nem látható elem' : celCimke(k)}`}
                     disabled={torles.isPending}
-                    onClick={() => torles.mutate(k.id)}
+                    onClick={() => torol(k)}
                   >
                     ✕
                   </button>
@@ -136,7 +162,18 @@ function UjKapcsolatModal({
     if (fajta === 'megfelel') body.celSzabalyzatKod = szabalyzatKod;
     else if (fajta === 'hivatkozik' && kulsoLink) body.celKulsoLink = kulsoLink;
     else body.celElemId = celElemId;
-    felvesz.mutate(body, { onSuccess: onBezar });
+    const cel =
+      fajta === 'megfelel'
+        ? szabalyzatKod
+        : fajta === 'hivatkozik' && kulsoLink
+          ? kulsoLink
+          : (elemek.find((e) => e.id === celElemId)?.kulcs ?? '');
+    felvesz.mutate(body, {
+      onSuccess: () => {
+        uzenet.siker(`Kapcsolat felvéve: ${elem.kulcs} ${fajta} → ${cel}`);
+        onBezar();
+      },
+    });
   };
 
   const ervenyes =
@@ -184,10 +221,4 @@ function UjKapcsolatModal({
       </div>
     </Modal>
   );
-}
-
-function hibaSzoveg(err: unknown): string {
-  const e = err as ApiHiba;
-  const reszletek = Array.isArray(e.reszletek) ? ` (${(e.reszletek as string[]).join(' ')})` : '';
-  return e.message + reszletek;
 }

@@ -106,7 +106,15 @@ export function Kartotek() {
             </div>
           </div>
           <div className="rf-akciok">
-            <LeptetoGombok elem={elem} verzio={ver} felhasznalo={felhasznalo} />
+            <LeptetoGombok
+              elem={elem}
+              verzio={ver}
+              felhasznalo={felhasznalo}
+              onUjVerzio={(v) => {
+                setValasztottV(v);
+                setOsszevetV(null);
+              }}
+            />
           </div>
         </div>
         <Stepper statusz={ver.statusz} />
@@ -115,7 +123,7 @@ export function Kartotek() {
 
       <div className="reszlet-test">
         <div className="tartalom">
-          {szerkeszt ? (
+          {szerkeszt && szerkesztheto ? (
             <div className="blokk szerk-blokk">
               <Szerkeszto elem={elem} verzio={ver} onKesz={() => setSzerkeszt(false)} />
             </div>
@@ -207,9 +215,12 @@ export function Kartotek() {
                 <button
                   key={v.verzioSzam}
                   className={`verzio-tab${v.verzioSzam === ver.verzioSzam ? ' aktiv' : ''}`}
+                  aria-pressed={v.verzioSzam === ver.verzioSzam}
+                  // Szerkesztés közben a verzióváltás elvinné a mentetlen munkát.
+                  disabled={szerkeszt && v.verzioSzam !== ver.verzioSzam}
+                  title={szerkeszt ? 'Szerkesztés közben nem válthatsz verziót — előbb ments, vagy lépj ki.' : undefined}
                   onClick={() => {
                     setValasztottV(v.verzioSzam);
-                    setSzerkeszt(false);
                     setOsszevetV(null);
                   }}
                 >
@@ -223,6 +234,7 @@ export function Kartotek() {
               <label className="osszevet-valaszto">
                 <span>Összevetés a v{ver.verzioSzam}-vel:</span>
                 <select
+                  disabled={szerkeszt}
                   value={osszevetV ?? ''}
                   onChange={(e) => setOsszevetV(e.target.value ? Number(e.target.value) : null)}
                 >

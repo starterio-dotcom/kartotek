@@ -18,6 +18,15 @@ import type {
   TorlesDontes,
 } from './tipusok';
 
+declare module '@tanstack/react-query' {
+  interface Register {
+    mutationMeta: {
+      /** A komponens maga jeleníti meg a hibát (pl. dialógusban) — nincs globális hiba-toast. */
+      helyiHiba?: boolean;
+    };
+  }
+}
+
 export interface ElemSzuro {
   alkalmazasKod?: string;
   tipusKod?: string;
@@ -162,10 +171,12 @@ export function useElemKapcsolatok(id: string | undefined) {
 function useElemMutacio<TBe>(
   fn: (be: TBe) => Promise<Elem>,
   id: string,
+  meta?: { helyiHiba?: boolean },
 ) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: fn,
+    ...(meta ? { meta } : {}),
     onSuccess: (elem) => {
       qc.setQueryData(['elem', id], elem);
       void qc.invalidateQueries({ queryKey: ['elemek'] });
@@ -182,7 +193,7 @@ export function useVerzioSzerkesztes(id: string, v: number) {
     tipusMezok?: Record<string, unknown>;
     /** Optimista zár: a szerkesztés alapjául vett revízió. */
     alapRevizio?: number;
-  }>((be) => api.patch<Elem>(`/api/elemek/${id}/verziok/${v}`, be), id);
+  }>((be) => api.patch<Elem>(`/api/elemek/${id}/verziok/${v}`, be), id, { helyiHiba: true });
 }
 
 export function useLeptetes(id: string, v: number, akcio: string) {
@@ -209,6 +220,7 @@ export function useMegjegyzesMegoldas(id: string, v: number) {
 export function useElemLetrehozas() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { helyiHiba: true },
     mutationFn: (be: {
       alkalmazasKod: string;
       tipusKod: string;
@@ -235,6 +247,7 @@ export function useKapcsolatTorles(elemId: string) {
 export function useKapcsolatLetrehozas(elemId: string) {
   const qc = useQueryClient();
   return useMutation({
+    meta: { helyiHiba: true },
     mutationFn: (be: Record<string, unknown>) => api.post('/api/kapcsolatok', be),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['elem', elemId, 'kapcsolatok'] });
@@ -257,6 +270,7 @@ export function useCimkekFrissites(id: string) {
 export function useSzolgaltatasLetrehozas() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { helyiHiba: true },
     mutationFn: (be: { kod: string; nev: string; leiras?: string }) =>
       api.post<Szolgaltatas>('/api/szolgaltatasok', be),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['szolgaltatasok'] }),
@@ -266,6 +280,7 @@ export function useSzolgaltatasLetrehozas() {
 export function useAlkalmazasLetrehozas() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { helyiHiba: true },
     mutationFn: (be: { kod: string; nev: string; leiras?: string; szolgaltatasKod: string }) =>
       api.post<Alkalmazas>('/api/alkalmazasok', be),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['alkalmazasok'] }),
@@ -275,6 +290,7 @@ export function useAlkalmazasLetrehozas() {
 export function useAlkalmazasFrissites() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { helyiHiba: true },
     mutationFn: ({ kod, ...be }: { kod: string; nev?: string; leiras?: string }) =>
       api.patch<Alkalmazas>(`/api/alkalmazasok/${kod}`, be),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['alkalmazasok'] }),
@@ -294,6 +310,7 @@ export function useTorolheto(id: string | undefined) {
 export function useElemTorles() {
   const qc = useQueryClient();
   return useMutation({
+    meta: { helyiHiba: true },
     mutationFn: (id: string) => api.del<void>(`/api/elemek/${id}`),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['elemek'] }),
   });

@@ -1,8 +1,12 @@
 import { useMemo, useState } from 'react';
+import { szabad } from '@kartotek/shared';
 import { useMegjegyzes, useMegjegyzesMegoldas, useFelhasznalok } from '../api/hooks';
+import { useAuth } from '../allapot/auth';
+import { uzenet } from '../allapot/uzenetek';
 import type { Elem, Verzio, Megjegyzes } from '../api/tipusok';
 
 export function Velemenyezes({ elem, verzio }: { elem: Elem; verzio: Verzio }) {
+  const { felhasznalo } = useAuth();
   const ujMegjegyzes = useMegjegyzes(elem.id, verzio.verzioSzam);
   const megoldas = useMegjegyzesMegoldas(elem.id, verzio.verzioSzam);
   const { data: felhasznalok } = useFelhasznalok();
@@ -16,6 +20,11 @@ export function Velemenyezes({ elem, verzio }: { elem: Elem; verzio: Verzio }) {
   const [valaszMjid, setValasz] = useState<string | null>(null);
   const [valaszSzoveg, setValaszSzoveg] = useState('');
 
+  // A backend ugyanezt kényszeríti: Olvasónak ne kínáljunk olyat, ami némán elbukna.
+  const ctx = felhasznalo ? { felhasznalo, alkalmazasKod: elem.alkalmazasKod } : null;
+  const irhat = !!ctx && szabad('megjegyzés.írás', ctx);
+  const megoldhat = !!ctx && szabad('megjegyzés.megoldás', ctx);
+
   const gyokerek = verzio.megjegyzesek.filter((m) => !m.valaszMjid);
   const valaszok = (mjid: string) => verzio.megjegyzesek.filter((m) => m.valaszMjid === mjid);
 
@@ -25,6 +34,7 @@ export function Velemenyezes({ elem, verzio }: { elem: Elem; verzio: Verzio }) {
       { szoveg: szov, ...(valasz ? { valaszMjid: valasz } : {}) },
       {
         onSuccess: () => {
+          uzenet.siker(valasz ? 'Válasz elküldve.' : 'Megjegyzés elküldve — a másik fél értesítést kapott.');
           if (valasz) {
             setValasz(null);
             setValaszSzoveg('');
@@ -33,6 +43,8 @@ export function Velemenyezes({ elem, verzio }: { elem: Elem; verzio: Verzio }) {
       },
     );
   };
+  const megold = (mjid: string) =>
+    megoldas.mutate({ mjid }, { onSuccess: () => uzenet.siker('Megjegyzés megoldottra állítva.') });
 
   return (
     <div className="mj-lista">
@@ -41,54 +53,67 @@ export function Velemenyezes({ elem, verzio }: { elem: Elem; verzio: Verzio }) {
       )}
       {gyokerek.map((m) => (
         <div key={m.mjid} className="mj-sor">
-          <MegjegyzesSor m={m} szerzo={nev(m.szerzoId)} onMegold={() => megoldas.mutate({ mjid: m.mjid })} />
+          <MegjegyzesSor m={m} szerzo={nev(m.szerzoId)} onMegold={megoldhat ? () => megold(m.mjid) : undefined} />
           {valaszok(m.mjid).map((r) => (
             <div key={r.mjid} className="mj-valasz">
-              <MegjegyzesSor m={r} szerzo={nev(r.szerzoId)} onMegold={() => megoldas.mutate({ mjid: r.mjid })} />
+              <MegjegyzesSor m={r} szerzo={nev(r.szerzoId)} onMegold={megoldhat ? () => megold(r.mjid) : undefined} />
             </div>
           ))}
-          {valaszMjid === m.mjid ? (
-            <div className="mj-uj">
-              <textarea
-                className="mezo-be"
-                value={valaszSzoveg}
-                onChange={(e) => setValaszSzoveg(e.target.value)}
-                placeholder="Válasz…"
-                aria-label="Válasz"
-              />
-              <button className="gomb elsodleges" onClick={() => kuld(valaszSzoveg, m.mjid)}>
-                Küldés
+          {irhat &&
+            (valaszMjid === m.mjid ? (
+              <div className="mj-uj">
+                <textarea
+                  className="mezo-be"
+                  value={valaszSzoveg}
+                  onChange={(e) => setValaszSzoveg(e.target.value)}
+                  placeholder="Válasz…"
+                  aria-label="Válasz"
+                />
+                <button
+                  className="gomb elsodleges"
+                  disabled={ujMegjegyzes.isPending || !valaszSzoveg.trim()}
+                  onClick={() => kuld(valaszSzoveg, m.mjid)}
+                >
+                  {ujMegjegyzes.isPending ? 'Küldés…' : 'Küldés'}
+                </button>
+              </div>
+            ) : (
+              <button
+                className="kapcs-link"
+                style={{ fontSize: 12, marginTop: 4 }}
+                onClick={() => setValasz(m.mjid)}
+              >
+                Válasz
               </button>
-            </div>
-          ) : (
-            <button
-              className="kapcs-link"
-              style={{ fontSize: 12, marginTop: 4 }}
-              onClick={() => setValasz(m.mjid)}
-            >
-              Válasz
-            </button>
-          )}
+            ))}
         </div>
       ))}
 
-      <div className="mj-uj">
-        <textarea
-          className="mezo-be"
-          value={szoveg}
-          onChange={(e) => setSzoveg(e.target.value)}
-          placeholder="Új megjegyzés…"
-          aria-label="Új megjegyzés"
-        />
-        <button className="gomb elsodleges" disabled={ujMegjegyzes.isPending} onClick={() => kuld(szoveg)}>
-          Küldés
-        </button>
-      </div>
+      {irhat ? (
+        <div className="mj-uj">
+          <textarea
+            className="mezo-be"
+            value={szoveg}
+            onChange={(e) => setSzoveg(e.target.value)}
+            placeholder="Új megjegyzés…"
+            aria-label="Új megjegyzés"
+          />
+          <button
+            className="gomb elsodleges"
+            disabled={ujMegjegyzes.isPending || !szoveg.trim()}
+            onClick={() => kuld(szoveg)}
+          >
+            {ujMegjegyzes.isPending ? 'Küldés…' : 'Küldés'}
+          </button>
+        </div>
+      ) : (
+        <p className="mj-zar">Megjegyzést Szerző, Jóváhagyó vagy Admin szerepkörrel írhatsz.</p>
+      )}
     </div>
   );
 }
 
-function MegjegyzesSor({ m, szerzo, onMegold }: { m: Megjegyzes; szerzo: string; onMegold: () => void }) {
+function MegjegyzesSor({ m, szerzo, onMegold }: { m: Megjegyzes; szerzo: string; onMegold?: () => void }) {
   return (
     <div className="mj-fej">
       <div>
@@ -98,7 +123,11 @@ function MegjegyzesSor({ m, szerzo, onMegold }: { m: Megjegyzes; szerzo: string;
         </div>
       </div>
       {m.allapot === 'nyitott' ? (
-        <button className="mj-megold" onClick={onMegold}>Megoldottra</button>
+        onMegold ? (
+          <button className="mj-megold" onClick={onMegold}>Megoldottra</button>
+        ) : (
+          <span className="mj-megoldva">nyitott</span>
+        )
       ) : (
         <span className="mj-megoldva">megoldott</span>
       )}

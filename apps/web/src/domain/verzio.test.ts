@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { elerhetoMuveletek, szerkesztoIds, vanUjabbAktivVerzio } from './verzio';
+import { elerhetoMuveletek, lepesSikerSzoveg, muveletHint, MUVELET_UI, szerkesztoIds, vanUjabbAktivVerzio } from './verzio';
 import type { Elem, Verzio, Felhasznalo } from '../api/tipusok';
 import type { Statusz, Szerepkor } from '@kartotek/shared';
 
@@ -93,5 +93,60 @@ describe('elerhetoMuveletek — szerep + státusz szerinti gombok', () => {
     const v = verzio({ statusz: 'Vázlat' });
     const m = elerhetoMuveletek(elem([v]), v, felh('u3', 'Olvasó'));
     expect(m).toHaveLength(0);
+  });
+
+  it('regresszió: a visszadobó Jóváhagyó az újraküldés után jóváhagyhat', () => {
+    const v = verzio({
+      statusz: 'Véleményezés',
+      modositottaId: 'u1',
+      statusznaplo: [
+        { hova: 'Vázlat', mikor: '', ki: 'u1' },
+        { honnan: 'Vázlat', hova: 'Véleményezés', mikor: '', ki: 'u1' },
+        { honnan: 'Véleményezés', hova: 'Vázlat', mikor: '', ki: 'u2' },
+        { honnan: 'Vázlat', hova: 'Véleményezés', mikor: '', ki: 'u1' },
+      ],
+    });
+    expect(elerhetoMuveletek(elem([v]), v, felh('u2', 'Jóváhagyó'))).toContain('verzió.jóváhagyás');
+  });
+});
+
+describe('muveletHint — miért nincs (több) gomb', () => {
+  const hint = (v: Verzio, f: Felhasznalo, e = elem([v])) => muveletHint(e, v, f, elerhetoMuveletek(e, v, f));
+
+  it('négy-szem-elv: a saját verzióját jóváhagyni akaró Jóváhagyó magyarázatot kap', () => {
+    const v = verzio({ statusz: 'Véleményezés', modositottaId: 'u1' });
+    expect(hint(v, felh('u1', 'Jóváhagyó'))).toMatch(/négy-szem-elv/);
+  });
+
+  it('Olvasó: szerepkör-magyarázat, nem a félrevezető „ütemező" szöveg', () => {
+    expect(hint(verzio({ statusz: 'Vázlat' }), felh('u3', 'Olvasó'))).toMatch(/Olvasóként/);
+  });
+
+  it('végállapot és ütemezett átmenet nevén nevezve', () => {
+    expect(hint(verzio({ statusz: 'Archivált' }), felh('u1', 'Szerző'))).toMatch(/végállapot/);
+    expect(hint(verzio({ statusz: 'Jóváhagyott', hatalyKezdet: '2030-01-01' }), felh('u9', 'Jóváhagyó'))).toMatch(/ütemező Hatályossá/);
+  });
+
+  it('a szerző a beküldött verzión: a jóváhagyóra vár', () => {
+    expect(hint(verzio({ statusz: 'Véleményezés', modositottaId: 'u1' }), felh('u1', 'Szerző'))).toMatch(/jóváhagyó dönt/);
+  });
+
+  it('ha a gombok önmagukért beszélnek, nincs hint', () => {
+    expect(hint(verzio({ statusz: 'Vázlat', modositottaId: 'u1' }), felh('u1', 'Szerző'))).toBeNull();
+  });
+});
+
+describe('életciklus-felület — megerősítés és visszajelzés', () => {
+  it('az Archiválás visszafordíthatatlan → megerősítő dialógus, veszélyes gomb', () => {
+    const a = MUVELET_UI['verzió.archiválás']!;
+    expect(a.dialog).not.toBe('nincs');
+    expect(a.valtozat).toBe('veszelyes');
+    expect(a.megerosito).toBe('Archiválás');
+  });
+
+  it('a sikerüzenet kulcsot és verziót tartalmaz; új verziónál az új számot', () => {
+    const e = elem([verzio({ statusz: 'Hatályos', verzioSzam: 1 }), verzio({ statusz: 'Vázlat', verzioSzam: 2 })]);
+    expect(lepesSikerSzoveg('bekuldes', e, 2)).toMatch(/^3R-BUS-009 v2 beküldve/);
+    expect(lepesSikerSzoveg('ujverzio', e, 1)).toBe('Új verzió nyitva: 3R-BUS-009 v2 (Vázlat).');
   });
 });

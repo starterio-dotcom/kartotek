@@ -130,7 +130,7 @@
   .reszlet-cim{font-size:23px;font-weight:700;letter-spacing:-.02em;color:var(--t-eros);line-height:1.25}
   .reszlet-altipus{font-size:12.5px;color:var(--t-halk);margin-top:4px;font-weight:500}
   .rf-akciok{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:4px}
-  .szerep-hint{font-size:11.5px;color:var(--t-leges);font-weight:500}
+  .szerep-hint{font-size:12px;color:var(--t-halk);font-weight:500;line-height:1.4;max-width:380px;text-align:right}
 
   /* ---------- Életciklus-stepper (szignatúra elem) ---------- */
   .stepper{display:flex;align-items:flex-start;margin:20px 0 0;padding-bottom:16px;overflow-x:auto}
@@ -234,7 +234,8 @@
     animation:fadeIn .15s ease}
   @keyframes fadeIn{from{opacity:0}to{opacity:1}}
   .modal{background:#fff;border-radius:var(--r-l);box-shadow:0 24px 60px -12px rgba(16,24,40,.3);
-    padding:24px;width:100%;max-width:440px;animation:slideUp .18s ease}
+    padding:24px;width:100%;max-width:440px;animation:slideUp .18s ease;
+    max-height:calc(100vh - 40px);overflow-y:auto}
   @keyframes slideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   .modal h3{font-size:17px;font-weight:700;color:var(--t-eros);letter-spacing:-.01em;margin-bottom:12px}
   .modal p{font-size:13px;color:var(--t-halk)}
@@ -254,6 +255,16 @@
   .modal-gombok .btn:not(.masodlagos):hover{background:var(--brand-hover)}
   .modal-gombok .btn.masodlagos{background:#fff;border-color:var(--keret-eros);color:var(--t-alap)}
   .modal-gombok .btn.masodlagos:hover{background:var(--felulet-2)}
+  /* Visszafordíthatatlan / lezáró művelet megerősítése: piros, műveletspecifikus gomb. */
+  .modal-gombok .btn.veszelyes:not(.masodlagos){background:var(--negativ);color:#fff}
+  .modal-gombok .btn.veszelyes:not(.masodlagos):hover{background:#B51C0C}
+  .modal-gombok .btn:disabled{opacity:.6;cursor:not-allowed}
+  .megerosites-szoveg{font-size:13.5px;color:var(--t-alap);line-height:1.55}
+  .megerosites-szoveg p{font-size:13.5px;color:var(--t-alap);margin-top:8px}
+  .megerosites-szoveg p:first-child{margin-top:0}
+  .modal .dialog-magyarazat{font-size:13px;color:var(--t-halk);background:var(--felulet-2);
+    border-radius:var(--r-s);padding:9px 11px;margin-bottom:4px;line-height:1.5}
+  .modal .jelolo label{margin:0;font-weight:500;font-size:13.5px}
   .modal .hiba{color:var(--negativ);background:var(--negativ-bg);border-radius:var(--r-s);
     font-size:12.5px;font-weight:600;margin-top:10px;padding:7px 11px;display:none}
 
@@ -263,6 +274,27 @@
     font-size:13px;font-weight:500;opacity:0;pointer-events:none;
     transition:opacity .2s,transform .2s;z-index:200;max-width:380px;box-shadow:var(--arnyek-m)}
   #toast.lathato{opacity:1;transform:none}
+  /* Központi visszajelzés (allapot/uzenetek.tsx) */
+  .mezo-sugo{font-size:12px;color:var(--t-leges);margin-top:4px}
+  .mj-zar{font-size:12.5px;color:var(--t-leges);font-style:italic;margin-top:8px}
+  .szerk-piszkos{color:var(--figyelem);font-weight:700;text-transform:none;letter-spacing:0}
+  .uzenet-sav{position:fixed;bottom:22px;right:22px;z-index:200;display:flex;flex-direction:column;
+    gap:8px;max-width:min(420px,calc(100vw - 32px));pointer-events:none}
+  .uzenet-regio{display:flex;flex-direction:column;gap:8px}
+  .uzenet{pointer-events:auto;display:flex;align-items:flex-start;gap:10px;background:var(--t-eros);color:#fff;
+    border-radius:var(--r-m);padding:11px 12px 11px 14px;font-size:13px;font-weight:500;line-height:1.45;
+    box-shadow:var(--arnyek-m);animation:slideUp .18s ease}
+  .uzenet-hiba{background:#7A1509}
+  .uzenet-ikon{flex:none;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;
+    font-size:11px;font-weight:800;background:rgba(255,255,255,.18)}
+  .uzenet-szoveg{flex:1;padding-top:1px}
+  .uzenet-akcio{flex:none;background:none;border:1px solid rgba(255,255,255,.45);color:#fff;border-radius:var(--r-s);
+    padding:2px 9px;font-size:12.5px;font-weight:700}
+  .uzenet-akcio:hover{background:rgba(255,255,255,.12)}
+  .uzenet-bezar{flex:none;background:none;border:none;color:rgba(255,255,255,.8);font-size:13px;
+    width:24px;height:24px;border-radius:var(--r-s)}
+  .uzenet-bezar:hover{background:rgba(255,255,255,.12);color:#fff}
+  @media print{.uzenet-sav{display:none}}
 
   /* ---------- Szolgáltatás-áttekintés ---------- */
   .att-gomb{display:flex;justify-content:space-between;align-items:center;gap:8px;

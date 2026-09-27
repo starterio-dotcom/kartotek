@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useKiadasok, useKiadasTartalom, useKiadasLetrehozas } from '../api/hooks';
 import { useAuth } from '../allapot/auth';
 import { Betolto, Hiba, Modal } from '../komponens/ui';
+import { hibaSzoveg } from '../api/hibaSzoveg';
+import { uzenet } from '../allapot/uzenetek';
 
 const datumHu = (d: string) => new Date(d).toLocaleDateString('hu-HU');
 
@@ -39,14 +41,22 @@ function UjKiadasModal({ onBezar }: { onBezar: () => void }) {
   const [verzio, setVerzio] = useState('');
   const [datum, setDatum] = useState('');
   const kuld = () =>
-    letrehoz.mutate({ verzio: verzio.trim(), datum }, { onSuccess: onBezar });
+    letrehoz.mutate(
+      { verzio: verzio.trim(), datum },
+      {
+        onSuccess: () => {
+          uzenet.siker(`Kiadás létrehozva: ${verzio.trim()} — a verziókat a kartotékon rendelheted hozzá.`);
+          onBezar();
+        },
+      },
+    );
   return (
     <Modal cim="Új kiadás" onBezar={onBezar}>
       <label>Megnevezés</label>
       <input value={verzio} onChange={(e) => setVerzio(e.target.value)} placeholder="pl. R6 · 2026 Q3" />
       <label>Dátum</label>
       <input type="date" value={datum} onChange={(e) => setDatum(e.target.value)} />
-      {letrehoz.isError && <Hiba uzenet={(letrehoz.error as Error).message} />}
+      {letrehoz.isError && <Hiba uzenet={hibaSzoveg(letrehoz.error)} />}
       <div className="modal-gombok">
         <button className="btn masodlagos" onClick={onBezar}>Mégse</button>
         <button className="btn" disabled={!verzio.trim() || !datum || letrehoz.isPending} onClick={kuld}>

@@ -1,57 +1,59 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, ApiHiba } from '../api/kliens';
+import { api } from '../api/kliens';
+import { hibaSzoveg } from '../api/hibaSzoveg';
+import { uzenet } from '../allapot/uzenetek';
 import type { Elem, Verzio, Felhasznalo } from '../api/tipusok';
-import { elerhetoMuveletek, MUVELET_UI, type DialogTipus } from '../domain/verzio';
+import { elerhetoMuveletek, lepesSikerSzoveg, muveletHint, MUVELET_UI, type MuveletUi } from '../domain/verzio';
 import { Gomb, Modal, Mezo, Hiba } from '../komponens/ui';
-
-interface DialogAllapot {
-  tipus: DialogTipus;
-  akcio: string;
-  cimke: string;
-}
 
 export function LeptetoGombok({
   elem,
   verzio,
   felhasznalo,
+  onUjVerzio,
 }: {
   elem: Elem;
   verzio: Verzio;
   felhasznalo: Felhasznalo;
+  /** Új verzió nyitása után a nézet az új Vázlatra vált (különben észre sem venni). */
+  onUjVerzio?: (verzioSzam: number) => void;
 }) {
   const qc = useQueryClient();
-  const [dialog, setDialog] = useState<DialogAllapot | null>(null);
+  const [dialog, setDialog] = useState<MuveletUi | null>(null);
 
   const leptet = useMutation({
+    // A dialógusos lépések hibája a dialógusban látszik; az egykattintásosaké toastban (lent).
+    meta: { helyiHiba: true },
     mutationFn: ({ akcio, body }: { akcio: string; body?: unknown }) =>
       api.post<Elem>(`/api/elemek/${elem.id}/verziok/${verzio.verzioSzam}/${akcio}`, body),
-    onSuccess: (uj) => {
+    onSuccess: (uj, { akcio }) => {
       qc.setQueryData(['elem', elem.id], uj);
       void qc.invalidateQueries({ queryKey: ['elemek'] });
       void qc.invalidateQueries({ queryKey: ['graf'] });
       setDialog(null);
+      uzenet.siker(lepesSikerSzoveg(akcio, uj, verzio.verzioSzam));
+      if (akcio === 'ujverzio') onUjVerzio?.(Math.max(...uj.verziok.map((v) => v.verzioSzam)));
     },
   });
 
-  const muveletek = elerhetoMuveletek(elem, verzio, felhasznalo)
-    .map((m) => MUVELET_UI[m])
-    .filter((x): x is NonNullable<typeof x> => !!x);
-
-  if (muveletek.length === 0)
-    return <span className="szerep-hint">Innen az ütemező léptet tovább, dátum alapján.</span>;
+  const elerheto = elerhetoMuveletek(elem, verzio, felhasznalo);
+  const muveletek = elerheto.map((m) => MUVELET_UI[m]).filter((x): x is MuveletUi => !!x);
+  const hint = muveletHint(elem, verzio, felhasznalo, elerheto);
 
   return (
     <>
+      {hint && <span className="szerep-hint">{hint}</span>}
       {muveletek.map((m) => (
         <Gomb
           key={m.akcio}
           valtozat={m.valtozat}
+          title={m.leiras}
           disabled={leptet.isPending}
           onClick={() =>
             m.dialog === 'nincs'
-              ? leptet.mutate({ akcio: m.akcio })
-              : setDialog({ tipus: m.dialog, akcio: m.akcio, cimke: m.cimke })
+              ? leptet.mutate({ akcio: m.akcio }, { onError: (e) => uzenet.hiba(hibaSzoveg(e)) })
+              : setDialog(m)
           }
         >
           {m.cimke}
@@ -62,8 +64,11 @@ export function LeptetoGombok({
         <LeptetoDialog
           dialog={dialog}
           folyamatban={leptet.isPending}
-          hiba={leptet.isError ? (leptet.error as ApiHiba).message : null}
-          onMegse={() => setDialog(null)}
+          hiba={leptet.isError ? hibaSzoveg(leptet.error) : null}
+          onMegse={() => {
+            setDialog(null);
+            leptet.reset();
+          }}
           onKuld={(body) => leptet.mutate({ akcio: dialog.akcio, body })}
         />
       )}
@@ -71,7 +76,8 @@ export function LeptetoGombok({
   );
 }
 
-const maStr = () => new Date().toISOString().slice(0, 10);
+/** A mai nap HELYI idő szerint (a `toISOString` UTC-je éjfél után a tegnapot adná). */
+const maStr = () => new Date().toLocaleDateString('sv-SE');
 
 function LeptetoDialog({
   dialog,
@@ -80,7 +86,7 @@ function LeptetoDialog({
   onMegse,
   onKuld,
 }: {
-  dialog: DialogAllapot;
+  dialog: MuveletUi;
   folyamatban: boolean;
   hiba: string | null;
   onMegse: () => void;
@@ -91,54 +97,65 @@ function LeptetoDialog({
   const [hatalyVeg, setVeg] = useState('');
   const [indoklas, setIndoklas] = useState('');
   const [helyiHiba, setHelyiHiba] = useState<string | null>(null);
+  const tipus = dialog.dialog;
 
   const kuld = () => {
     setHelyiHiba(null);
-    if (dialog.tipus === 'jovahagyas') {
+    if (tipus === 'jovahagyas') {
       if (!hatalyKezdet) return setHelyiHiba('A kezdődátum kötelező.');
       const veg = visszavonasig ? null : hatalyVeg;
       if (!visszavonasig && !veg) return setHelyiHiba('Adj meg végdátumot vagy jelöld a „visszavonásig” opciót.');
       if (veg && veg <= hatalyKezdet) return setHelyiHiba('A végdátumnak a kezdődátum után kell lennie.');
       return onKuld({ hatalyKezdet, hatalyVeg: veg });
     }
-    if (dialog.tipus === 'visszadobas') {
+    if (tipus === 'visszadobas') {
       if (!indoklas.trim()) return setHelyiHiba('Az indoklás megadása kötelező.');
       return onKuld({ indoklas });
     }
-    if (dialog.tipus === 'kivezetes') {
+    if (tipus === 'kivezetes') {
       if (!hatalyVeg) return setHelyiHiba('A végdátum kötelező.');
       return onKuld({ hatalyVeg });
     }
+    if (tipus === 'megerosites') return onKuld(undefined);
     return onKuld({ indoklas: indoklas || undefined });
   };
 
+  const felirat = dialog.megerosito ?? 'Megerősítés';
+
   return (
-    <Modal cim={dialog.cimke} onBezar={onMegse}>
-      {dialog.tipus === 'jovahagyas' && (
+    <Modal cim={dialog.cimke.replace(/…$/, '')} onBezar={onMegse}>
+      <p className="dialog-magyarazat">{dialog.leiras}</p>
+
+      {tipus === 'jovahagyas' && (
         <>
           <Mezo cimke="Hatályosság kezdete">
             <input type="date" value={hatalyKezdet} onChange={(e) => setKezdet(e.target.value)} />
           </Mezo>
           <div className="jelolo">
-            <input type="checkbox" checked={visszavonasig} onChange={(e) => setVisszavonasig(e.target.checked)} />
-            <span>Visszavonásig hatályos (nincs végdátum)</span>
+            <input
+              id="lepteto-visszavonasig"
+              type="checkbox"
+              checked={visszavonasig}
+              onChange={(e) => setVisszavonasig(e.target.checked)}
+            />
+            <label htmlFor="lepteto-visszavonasig">Visszavonásig hatályos (nincs végdátum)</label>
           </div>
           {!visszavonasig && (
             <Mezo cimke="Hatályosság vége">
-              <input type="date" value={hatalyVeg} onChange={(e) => setVeg(e.target.value)} />
+              <input type="date" min={hatalyKezdet || undefined} value={hatalyVeg} onChange={(e) => setVeg(e.target.value)} />
             </Mezo>
           )}
         </>
       )}
 
-      {dialog.tipus === 'kivezetes' && (
+      {tipus === 'kivezetes' && (
         <Mezo cimke="Hatályosság vége">
-          <input type="date" value={hatalyVeg} onChange={(e) => setVeg(e.target.value)} />
+          <input type="date" min={maStr()} value={hatalyVeg} onChange={(e) => setVeg(e.target.value)} />
         </Mezo>
       )}
 
-      {(dialog.tipus === 'visszadobas' || dialog.tipus === 'elvetes') && (
-        <Mezo cimke={dialog.tipus === 'visszadobas' ? 'Indoklás (kötelező)' : 'Indoklás (opcionális)'}>
+      {(tipus === 'visszadobas' || tipus === 'elvetes') && (
+        <Mezo cimke={tipus === 'visszadobas' ? 'Indoklás (kötelező)' : 'Indoklás (opcionális)'}>
           <textarea value={indoklas} onChange={(e) => setIndoklas(e.target.value)} />
         </Mezo>
       )}
@@ -147,7 +164,9 @@ function LeptetoDialog({
 
       <div className="modal-gombok">
         <button className="btn masodlagos" onClick={onMegse}>Mégse</button>
-        <button className="btn" disabled={folyamatban} onClick={kuld}>Megerősítés</button>
+        <button className={`btn${dialog.valtozat === 'veszelyes' ? ' veszelyes' : ''}`} disabled={folyamatban} onClick={kuld}>
+          {folyamatban ? `${felirat}…` : felirat}
+        </button>
       </div>
     </Modal>
   );
