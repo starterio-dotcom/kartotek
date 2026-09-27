@@ -62,6 +62,7 @@ if ! egeszseg_var "$PORT" "$KIADAS"; then
     systemctl restart "$SZOLGALTATAS"
     if egeszseg_var "$PORT" "$(cat "$ELOZO/KIADAS" 2>/dev/null || true)"; then
       naplo "Visszaállva — az előző kiadás fut, a web nem változott."
+      rm -rf "$UJ" # a hibás kiadás ne maradjon a listában (a hiba oka a journalban)
     else
       echo "KRITIKUS: a visszaállás után sem egészséges az API — kézi beavatkozás kell!" >&2
     fi
