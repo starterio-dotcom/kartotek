@@ -90,3 +90,4 @@ Az archiválás a tartalom **lezárásának** (nem törlésének) útja — áll
 | **Részletes feladatlista / fázisos ütemterv** | `docs/utiterv.md` |
 | Migráció a prototípusból, példaadat-leltár | `docs/migracio.md` |
 | Indító promptok és munkamenet Claude Code-hoz | `docs/claude-code-inditas.md` |
+| **Üzemeltetés: deploy, visszaállítás, staging, mentés, figyelés** | `docs/uzemeltetes.md` |

@@ -73,6 +73,9 @@ A DB hiánya nem dönti le az API-t: a `/health` `db.csatlakozva=false`-t jelez,
 
 ## Üzemeltetés (éles, Fázis 7)
 
+**A futó aru.hu / staging.aru.hu környezet** (kiadás `scripts/deploy.sh`-val, automatikus visszaállás,
+figyelés, titkosított mentés, felhasználó-felvétel): **[docs/uzemeltetes.md](docs/uzemeltetes.md)**.
+
 **Konténeres indítás** (MongoDB replica set + API + nginx-es web):
 
 ```bash
