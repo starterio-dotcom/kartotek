@@ -211,8 +211,10 @@ export interface AuditBejegyzes {
   ut: string;
   parameterek: Record<string, string>;
   elemId: string | null;
-  /** Az érintett elem beszédes kulcsa (a szerver oldja fel). */
+  /** Az érintett elem beszédes kulcsa (a szerver oldja fel; törölt elemnél a sírkőből). */
   elemKulcs: string | null;
+  /** Az elemet azóta fizikailag törölték (a kulcsa a sírkőből jön, nincs mire hivatkozni). */
+  elemTorolve?: boolean;
   statusz: number;
   idotartamMs: number | null;
 }

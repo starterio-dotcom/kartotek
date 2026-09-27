@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { formazKulcs, elemezKulcs, validalKulcsReszek, ervenyesKulcs } from './kulcs';
+import {
+  formazKulcs,
+  elemezKulcs,
+  validalKulcsReszek,
+  ervenyesKulcs,
+  legnagyobbKiadottSorszam,
+  sorszamHatokor,
+} from './kulcs';
 
 describe('azonosító — formázás', () => {
   it('üzleti elem réteg nélkül, nullával töltött sorszám', () => {
@@ -85,5 +92,22 @@ describe('azonosító — validálás', () => {
   it('ervenyesKulcs() teljes kört ellenőriz', () => {
     expect(ervenyesKulcs('3R-FE-TUS-002')).toBe(true);
     expect(ervenyesKulcs('3R-TUS-002')).toBe(false);
+  });
+});
+
+describe('sorszám-kiadás (nincs újrahasznosítás)', () => {
+  it('a hatókör alkalmazás + típus (+ réteg)', () => {
+    expect(sorszamHatokor('3R', 'BUS', null)).toBe('3R|BUS|-');
+    expect(sorszamHatokor('3R', 'TUS', 'FE')).toBe('3R|TUS|FE');
+  });
+
+  it('a törölt elemek sorszáma is számít — a törölt kulcs nem adható ki újra', () => {
+    // 3R-BUS-001, -002 él, a -003-at törölték → a legnagyobb kiadott 3 (a következő 4 lesz)
+    expect(legnagyobbKiadottSorszam(['3R-BUS-001', '3R-BUS-002'], [3])).toBe(3);
+  });
+
+  it('meglévő kulcsokból is helyes, érvénytelen kulcsot figyelmen kívül hagy', () => {
+    expect(legnagyobbKiadottSorszam(['3R-FE-TUS-002', 'hibás', '3R-FE-TUS-010'], [])).toBe(10);
+    expect(legnagyobbKiadottSorszam([], [])).toBe(0);
   });
 });

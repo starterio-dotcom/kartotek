@@ -1,30 +1,66 @@
 import {
   formazKulcs,
+  legnagyobbKiadottSorszam,
+  sorszamHatokor,
   uzletiTipus,
   type ElemLetrehozas,
   type TipusKod,
   type RetegKod,
   type Statusz,
 } from '@kartotek/shared';
-import { Alkalmazas, Elem } from '../../db/modellek.js';
+import { Alkalmazas, Elem, ElemSirko, Sorszamlalo } from '../../db/modellek.js';
 import { hiba400, hiba404 } from '../../hibak.js';
 import { elemValasz, elemBetolt } from '../kozos.js';
 import { ellenoriz } from '../../auth/rbac.js';
 import type { AktualisFelhasznalo } from '../../auth/plugin.js';
 
-/** A következő szabad sorszám az adott alkalmazás+típus(+réteg) hármasra. */
-async function kovetkezoSorszam(
+/** Az eddig VALAHA kiadott legnagyobb sorszám a hatókörben (meglévő elemek + sírkövek). */
+async function legnagyobbKiadott(
   alkalmazasKod: string,
   tipusKod: TipusKod,
   retegKod: RetegKod | null,
 ): Promise<number> {
-  const meglevok = await Elem.find({ alkalmazasKod, tipusKod, retegKod }).select('kulcs').lean();
-  let max = 0;
-  for (const e of meglevok) {
-    const m = e.kulcs.match(/(\d+)$/);
-    if (m) max = Math.max(max, parseInt(m[1]!, 10));
+  const [elemek, sirkovek] = await Promise.all([
+    Elem.find({ alkalmazasKod, tipusKod, retegKod }).select('kulcs').lean(),
+    ElemSirko.find({ alkalmazasKod, tipusKod, retegKod }).select('sorszam').lean(),
+  ]);
+  return legnagyobbKiadottSorszam(
+    elemek.map((e) => e.kulcs),
+    sirkovek.map((s) => s.sorszam),
+  );
+}
+
+/** A számláló legalább `min`-re állítása ($max: idempotens, soha nem csökkent). */
+async function szamlaloLegalabb(hatokor: string, min: number): Promise<void> {
+  try {
+    await Sorszamlalo.updateOne({ _id: hatokor }, { $max: { ertek: min } }, { upsert: true });
+  } catch (e) {
+    // Egyidejű első upsert: a vesztes E11000-et kap — a dokumentum már létezik.
+    if ((e as { code?: number }).code !== 11000) throw e;
+    await Sorszamlalo.updateOne({ _id: hatokor }, { $max: { ertek: min } });
   }
-  return max + 1;
+}
+
+/**
+ * A következő sorszám atomi foglalása. A számláló csak növekszik, így egy kiadott
+ * sorszám — a törölt vázlaté is — soha nem adódik ki újra; párhuzamos létrehozásnál
+ * sem kaphat két elem ugyanazt. (A sorszámok között lehet hézag: az azonosító, nem darabszám.)
+ */
+export async function sorszamFoglal(
+  alkalmazasKod: string,
+  tipusKod: TipusKod,
+  retegKod: RetegKod | null,
+): Promise<number> {
+  const hatokor = sorszamHatokor(alkalmazasKod, tipusKod, retegKod);
+  const foglal = () =>
+    Sorszamlalo.findOneAndUpdate({ _id: hatokor }, { $inc: { ertek: 1 } }, { new: true }).lean();
+  let doc = await foglal();
+  if (!doc) {
+    // Első használat a hatókörben: a valaha kiadott legnagyobb sorszámról indulunk.
+    await szamlaloLegalabb(hatokor, await legnagyobbKiadott(alkalmazasKod, tipusKod, retegKod));
+    doc = await foglal();
+  }
+  return doc!.ertek;
 }
 
 /** Új elem létrehozása az első Vázlat-verzióval. */
@@ -41,10 +77,12 @@ export async function elemLetrehozas(
   if (!uzleti && !retegKod) throw hiba400('Technikai típushoz kötelező a réteg.');
 
   const most = new Date();
-  // Versenyhelyzet-biztos: párhuzamos létrehozásnál ütköző kulcsra (E11000) a
-  // sorszámot újraszámolva próbálkozunk (a unique index a végső védvonal).
+  // A sorszámot atomi számláló adja (nincs versenyhelyzet, nincs újrahasznosítás). Ha
+  // mégis ütközne egy létező kulccsal (pl. kézi import után lemaradt számláló), a
+  // számlálót a valaha kiadott maximumra emeljük és újrapróbálunk; a unique index a
+  // végső védvonal.
   for (let proba = 0; ; proba++) {
-    const sorszam = await kovetkezoSorszam(be.alkalmazasKod, be.tipusKod, retegKod);
+    const sorszam = await sorszamFoglal(be.alkalmazasKod, be.tipusKod, retegKod);
     const kulcs = formazKulcs({ alkKod: be.alkalmazasKod, retegKod, tipusKod: be.tipusKod, sorszam });
     try {
       const elem = await Elem.create({
@@ -68,7 +106,13 @@ export async function elemLetrehozas(
       });
       return elemValasz(elem.toObject());
     } catch (e) {
-      if ((e as { code?: number }).code === 11000 && proba < 4) continue;
+      if ((e as { code?: number }).code === 11000 && proba < 4) {
+        await szamlaloLegalabb(
+          sorszamHatokor(be.alkalmazasKod, be.tipusKod, retegKod),
+          await legnagyobbKiadott(be.alkalmazasKod, be.tipusKod, retegKod),
+        );
+        continue;
+      }
       throw e;
     }
   }

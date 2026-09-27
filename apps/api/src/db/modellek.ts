@@ -351,7 +351,44 @@ ErtesitesSchema.index(
   { expireAfterSeconds: Math.round(Math.max(1, config.ertesitesMegorzesNap) * 86_400) },
 );
 
+/**
+ * Sorszám-számláló hatókörönként (`3R|BUS|-`). Csak növekszik (atomi $inc), így egy
+ * kiadott sorszám — a törölt vázlaté is — soha nem adódik ki újra.
+ */
+const SorszamlaloSchema = new Schema(
+  {
+    _id: { type: String },
+    ertek: { type: Number, required: true, default: 0 },
+  },
+  { versionKey: false },
+);
+
+/**
+ * Sírkő: a fizikailag törölt elem nyoma (kulcs, ki, mikor). A számláló ebből is
+ * helyreállítható, és az audit-felület a törölt elem kulcsát is fel tudja oldani.
+ */
+const ElemSirkoSchema = new Schema(
+  {
+    elemId: { type: Schema.Types.ObjectId, required: true, unique: true },
+    kulcs: { type: String, required: true },
+    alkalmazasKod: { type: String, required: true },
+    tipusKod: { type: String, required: true },
+    retegKod: { type: String, default: null },
+    sorszam: { type: Number, required: true },
+    cim: { type: String, default: null },
+    torolve: { type: Date, required: true },
+    kiId: { type: Schema.Types.ObjectId, ref: 'Felhasznalo', default: null },
+    kiNev: { type: String, default: null },
+    /** 'törlés' (élő), vagy utólagos helyreállításnál a forrás megnevezése. */
+    forras: { type: String, default: 'törlés' },
+  },
+  { versionKey: false },
+);
+ElemSirkoSchema.index({ alkalmazasKod: 1, tipusKod: 1, retegKod: 1, sorszam: -1 });
+
 export const UtemezoZar = model('UtemezoZar', UtemezoZarSchema);
+export const Sorszamlalo = model('Sorszamlalo', SorszamlaloSchema);
+export const ElemSirko = model('ElemSirko', ElemSirkoSchema);
 export const Ertesites = model('Ertesites', ErtesitesSchema);
 export const AuditBejegyzes = model('AuditBejegyzes', AuditBejegyzesSchema);
 

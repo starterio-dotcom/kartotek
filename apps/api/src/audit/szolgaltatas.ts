@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { AuditBejegyzes, Elem } from '../db/modellek.js';
+import { AuditBejegyzes, Elem, ElemSirko } from '../db/modellek.js';
 import type { AuditEsemeny } from './plugin.js';
 
 export interface AuditSzuro {
@@ -44,9 +44,19 @@ export async function auditLista(sz: AuditSzuro) {
     (x) => Types.ObjectId.isValid(x),
   );
   const kulcsok = new Map<string, string>();
+  const torolt = new Set<string>();
   if (elemIdk.length) {
     const elemek = await Elem.find({ _id: { $in: elemIdk } }).select('kulcs').lean();
     for (const e of elemek) kulcsok.set(String(e._id), e.kulcs);
+    // A fizikailag törölt elemek kulcsa a sírkőből (így az auditban is beszédes marad).
+    const hianyzo = elemIdk.filter((x) => !kulcsok.has(x));
+    if (hianyzo.length) {
+      const sirkovek = await ElemSirko.find({ elemId: { $in: hianyzo } }).select('elemId kulcs').lean();
+      for (const s of sirkovek) {
+        kulcsok.set(String(s.elemId), s.kulcs);
+        torolt.add(String(s.elemId));
+      }
+    }
   }
 
   return {
@@ -55,6 +65,7 @@ export async function auditLista(sz: AuditSzuro) {
       ...r,
       felhasznaloId: felhasznaloId ? String(felhasznaloId) : null,
       elemKulcs: r.elemId ? (kulcsok.get(r.elemId) ?? null) : null,
+      elemTorolve: r.elemId ? torolt.has(r.elemId) : false,
     })),
     osszes,
     limit: sz.limit,

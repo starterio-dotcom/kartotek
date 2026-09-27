@@ -3,10 +3,12 @@ import { elemezKulcs, type Statusz, type TipusKod, type RetegKod } from '@kartot
 import {
   Alkalmazas,
   Elem,
+  ElemSirko,
   Felhasznalo,
   Kapcsolat,
   Kiadas,
   Reteg,
+  Sorszamlalo,
   Szabalyzat,
   Szolgaltatas,
   Tipus,
@@ -63,6 +65,10 @@ export async function seedAdatbazis(): Promise<SeedEredmeny> {
     Kiadas.deleteMany({}),
     Tipus.deleteMany({}),
     Reteg.deleteMany({}),
+    // Friss demó-állapot: a sorszám-számlálók és a sírkövek is (a számláló a meglévő
+    // elemekből újraindul — egy teljes újraseedelés az egyetlen eset, ahol ez helyes).
+    Sorszamlalo.deleteMany({}),
+    ElemSirko.deleteMany({}),
   ]);
 
   // Referenciaadatok.

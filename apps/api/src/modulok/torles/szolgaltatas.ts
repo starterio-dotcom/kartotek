@@ -1,6 +1,6 @@
-import { Types } from 'mongoose';
-import { torolhetoE, type TorlesDontes } from '@kartotek/shared';
-import { Elem, Kapcsolat } from '../../db/modellek.js';
+import mongoose, { Types } from 'mongoose';
+import { elemezKulcs, torolhetoE, type TorlesDontes } from '@kartotek/shared';
+import { Elem, ElemSirko, Kapcsolat } from '../../db/modellek.js';
 import { hiba404, hiba409 } from '../../hibak.js';
 import { ellenoriz } from '../../auth/rbac.js';
 import { ervenyesId } from '../kozos.js';
@@ -49,14 +49,52 @@ export async function torlesElokeszit(
   return { ...d.dontes, kulcs: d.kulcs };
 }
 
-/** Fizikai törlés (csak ha a domain-szabály engedi); a kapcsolatait is takarítja. */
+/**
+ * Fizikai törlés (csak ha a domain-szabály engedi), TRANZAKCIÓBAN: sírkő (kulcs, ki,
+ * mikor) + az elem együtt — részleges hiba nem hagyhat árva állapotot, és a törölt
+ * kulcs nyoma sosem vész el (a sorszám így soha nem adható ki újra).
+ */
 export async function elemTorles(id: string, felh: AktualisFelhasznalo): Promise<void> {
   const d = await dontes(id);
   ellenoriz('vázlat.törlés', felh, { alkalmazasKod: d.alkalmazasKod });
   if (!d.dontes.torolheto)
     throw hiba409('Az elem fizikailag nem törölhető.', d.dontes.okok);
-  // Csak sosem hivatkozott Vázlatnál érünk ide; kimenő kapcsolat sincs, de a
-  // konzisztencia kedvéért takarítunk.
-  await Kapcsolat.deleteMany({ $or: [{ forrasElemId: d.oid }, { celElemId: d.oid }] });
-  await Elem.deleteOne({ _id: d.oid });
+
+  await mongoose.connection.transaction(async (session) => {
+    // Újraellenőrzés a tranzakción belül: a preflight óta beküldhették, zárolhatták
+    // vagy lekötötték — ilyenkor a törlés elmarad (és a sírkő sem jön létre).
+    const kapcsolatDb = await Kapcsolat.countDocuments(
+      { $or: [{ forrasElemId: d.oid }, { celElemId: d.oid }] },
+      { session },
+    );
+    const elem = await Elem.findOne({
+      _id: d.oid,
+      verziok: { $not: { $elemMatch: { statusz: { $ne: 'Vázlat' } } } },
+      'jogiZarolas.aktiv': { $ne: true },
+    })
+      .session(session)
+      .select('kulcs alkalmazasKod tipusKod retegKod verziok.cim')
+      .lean();
+    if (!elem || kapcsolatDb > 0)
+      throw hiba409('Az elem közben megváltozott (beküldték, zárolták vagy kapcsolat jött létre) — nem törölhető.');
+
+    await ElemSirko.create(
+      [
+        {
+          elemId: d.oid,
+          kulcs: elem.kulcs,
+          alkalmazasKod: elem.alkalmazasKod,
+          tipusKod: elem.tipusKod,
+          retegKod: elem.retegKod ?? null,
+          sorszam: elemezKulcs(elem.kulcs)?.sorszam ?? 0,
+          cim: elem.verziok.at(-1)?.cim ?? null,
+          torolve: new Date(),
+          kiId: felh.id,
+          kiNev: felh.nev,
+        },
+      ],
+      { session },
+    );
+    await Elem.deleteOne({ _id: d.oid }, { session });
+  });
 }

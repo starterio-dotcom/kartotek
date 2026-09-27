@@ -72,6 +72,30 @@ export function elemezKulcs(kulcs: string): KulcsReszek | null {
 }
 
 /** Részek üzleti szabályainak ellenőrzése (a kulcs-egyediséget a DB indexe adja). */
+/**
+ * A számláló hatóköre: a sorszám alkalmazás + típus (+ réteg) szerint egyedi
+ * (adatmodell.md, Azonosító-séma). Üzleti elemnél a réteg helyén `-`.
+ */
+export function sorszamHatokor(alkKod: string, tipusKod: TipusKod, retegKod: RetegKod | null): string {
+  return `${alkKod}|${tipusKod}|${retegKod ?? '-'}`;
+}
+
+/**
+ * Az eddig VALAHA kiadott legnagyobb sorszám egy hatókörben: a meglévő elemek kulcsai
+ * ÉS a törölt elemek (sírkövek) sorszámai alapján. Egy kiadott sorszám soha nem adható
+ * ki újra — a törölt vázlat kulcsa sem —, különben ugyanaz a beszédes azonosító az idő
+ * során két különböző követelményt jelölne (auditban, levelezésben, jegyekben).
+ */
+export function legnagyobbKiadottSorszam(meglevoKulcsok: string[], toroltSorszamok: number[]): number {
+  let max = 0;
+  for (const k of meglevoKulcsok) {
+    const r = elemezKulcs(k);
+    if (r) max = Math.max(max, r.sorszam);
+  }
+  for (const s of toroltSorszamok) if (Number.isFinite(s)) max = Math.max(max, s);
+  return max;
+}
+
 export function validalKulcsReszek(r: KulcsReszek): string[] {
   const hibak: string[] = [];
   if (!r.alkKod) hibak.push('Hiányzik az alkalmazáskód.');

@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { buildApp } from '../app.js';
 import { seedAdatbazis } from '../seed/seed.js';
-import { Elem, AuditBejegyzes, Ertesites } from '../db/modellek.js';
+import { Elem, AuditBejegyzes, Ertesites, ElemSirko, Sorszamlalo } from '../db/modellek.js';
 import { MemoriaKuldo } from '../ertesites/email.js';
 
 let replset: MongoMemoryReplSet;
@@ -400,6 +400,60 @@ describe('elemlista: lapozás + projekció', () => {
     expect(elemek.length).toBeGreaterThan(0);
     expect(Number(r.headers['x-osszes'])).toBe(elemek.length);
     expect(elemek.every((e) => e.verziok.some((v) => v.statusz === 'Hatályos'))).toBe(true);
+  });
+});
+
+describe('sorszám-kiosztás (a kulcs soha nem hasznosul újra)', () => {
+  const letrehoz = async () => {
+    const r = await hiv('POST', '/api/elemek', {
+      mint: ANNA,
+      body: { alkalmazasKod: '3R', tipusKod: 'BUS', cim: 'Sorszám-teszt', leirasMd: 'x' },
+    });
+    expect(r.statusCode).toBe(201);
+    return r.json() as { id: string; kulcs: string };
+  };
+
+  it('a törölt vázlat kulcsát a következő elem NEM kapja meg; a sírkő rögzül', async () => {
+    const elso = await letrehoz();
+    expect(elso.kulcs).toBe('3R-BUS-003'); // a seedben 001–002 van
+    expect((await hiv('DELETE', `/api/elemek/${elso.id}`, { mint: PETER })).statusCode).toBe(204);
+
+    const masodik = await letrehoz();
+    expect(masodik.kulcs).toBe('3R-BUS-004'); // nem 003!
+
+    const sirko = await ElemSirko.findOne({ elemId: elso.id }).lean();
+    expect(sirko).toMatchObject({ kulcs: '3R-BUS-003', sorszam: 3, kiNev: 'Nagy Péter', forras: 'törlés' });
+  });
+
+  it('az audit-napló a törölt elem kulcsát a sírkőből oldja fel', async () => {
+    await AuditBejegyzes.deleteMany({});
+    const e = await letrehoz();
+    await hiv('DELETE', `/api/elemek/${e.id}`, { mint: PETER });
+    await app.auditFlush();
+    const naplo = (await hiv('GET', `/api/audit?elemId=${e.id}`, { mint: PETER })).json();
+    const torles = naplo.bejegyzesek.find((b: { metodus: string }) => b.metodus === 'DELETE');
+    expect(torles).toMatchObject({ elemKulcs: e.kulcs, elemTorolve: true });
+  });
+
+  it('párhuzamos létrehozásnál minden elem egyedi, egymást követő sorszámot kap', async () => {
+    const eredmenyek = await Promise.all(Array.from({ length: 8 }, () => letrehoz()));
+    const szamok = eredmenyek.map((e) => Number(e.kulcs.split('-').pop())).sort((a, b) => a - b);
+    expect(szamok).toEqual([3, 4, 5, 6, 7, 8, 9, 10]);
+  });
+
+  it('elveszett számláló után a sírkövekből áll helyre — továbbra sincs újrahasznosítás', async () => {
+    const e = await letrehoz(); // 003
+    await hiv('DELETE', `/api/elemek/${e.id}`, { mint: PETER });
+    await Sorszamlalo.deleteMany({}); // pl. adatvesztés / kézi beavatkozás
+    expect((await letrehoz()).kulcs).toBe('3R-BUS-004');
+  });
+
+  it('lemaradt számlálónál a kézzel beszúrt kulccsal ütközve újraszinkronizál', async () => {
+    await letrehoz(); // a számláló létrejön (003)
+    const minta = await Elem.findOne({ kulcs: '3R-BUS-002' }).lean();
+    await Elem.collection.insertOne({ ...minta!, _id: new mongoose.Types.ObjectId(), kulcs: '3R-BUS-004' });
+    // A számláló 004-et adna → E11000 → a valaha kiadott maximumra (4) emel → 005.
+    expect((await letrehoz()).kulcs).toBe('3R-BUS-005');
   });
 });
 

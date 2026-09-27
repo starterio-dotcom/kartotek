@@ -143,7 +143,11 @@ export function AuditNaplo() {
                   </td>
                   <td title={`${b.metodus} ${b.ut}`}>{muveletCimke(b.metodus, b.utvonal, b.esemeny)}</td>
                   <td>
-                    {b.elemId && b.elemKulcs ? (
+                    {b.elemId && b.elemKulcs && b.elemTorolve ? (
+                      <span title="Az elemet azóta fizikailag törölték">
+                        {b.elemKulcs} <span className="ures">(törölve)</span>
+                      </span>
+                    ) : b.elemId && b.elemKulcs ? (
                       <Link to={`/elem/${b.elemId}`}>{b.elemKulcs}</Link>
                     ) : (
                       (b.elemId ?? '—')
