@@ -65,11 +65,14 @@ export interface Elem {
 
 export interface Kapcsolat {
   id: string;
-  forrasElemId: string;
+  /** Csonk-kapcsolatnál (nem olvasható túloldal) null. */
+  forrasElemId: string | null;
   celElemId: string | null;
   celSzabalyzatKod: string | null;
   celKulsoLink: string | null;
   fajta: KapcsolatFajta;
+  /** Hivatkozás-csonk: a túloldali elem olyan alkalmazásban van, amelyet nem olvashatsz. */
+  csonk?: boolean;
 }
 
 export interface ElemKapcsolatok {
@@ -84,6 +87,10 @@ export interface Felhasznalo {
   globalisAdmin: boolean;
   tagsagok: { alkalmazasKod: string; szerepkor: Szerepkor }[];
 }
+
+/** A felhasználólista tétele: nem-adminnak CSAK id + név (a többit a szerver elhagyja). */
+export type FelhasznaloListaTetel = Pick<Felhasznalo, 'id' | 'nev'> &
+  Partial<Pick<Felhasznalo, 'email' | 'globalisAdmin' | 'tagsagok'>>;
 
 export interface Szolgaltatas {
   id: string;

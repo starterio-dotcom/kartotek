@@ -68,7 +68,7 @@ export async function buildApp(opts: AppOpciok = {}): Promise<FastifyInstance> {
     },
     transform: jsonSchemaTransform,
   });
-  await app.register(swaggerUi, { routePrefix: '/dok' });
+  if (config.dokElerheto) await app.register(swaggerUi, { routePrefix: '/dok' });
 
   const HealthValasz = z.object({
     statusz: z.literal('ok'),

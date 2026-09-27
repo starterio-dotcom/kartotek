@@ -54,6 +54,9 @@ export const config = {
   mellekletTitok: process.env.MELLEKLET_URL_SECRET ?? (eles ? undefined : 'dev-melleklet-titok'),
   /** Az aláírt melléklet-URL érvényességi ideje ms-ben (alap 24 óra). */
   mellekletUrlTtlMs: Number(process.env.MELLEKLET_URL_TTL_MS ?? 24 * 60 * 60 * 1000),
+  /** Az interaktív API-dokumentáció (/dok) élesben alapból KI: a teljes API-felület
+   *  sémástul ne legyen hitelesítés nélkül olvasható. Dev-ben mindig elérhető. */
+  dokElerheto: !eles || (process.env.DOK_ELESBEN ?? 'false') === 'true',
   /** Audit-napló: az érzékeny olvasások (elem-részlet, melléklet, teljes lista) is naplózódjanak. */
   auditOlvasas: (process.env.AUDIT_OLVASAS ?? 'true') === 'true',
   /** Audit-napló megőrzési ideje napokban; 0 = korlátlan (állami megőrzési kötelezettség). */

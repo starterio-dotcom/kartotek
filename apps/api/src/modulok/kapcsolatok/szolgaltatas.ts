@@ -9,7 +9,7 @@ import {
   type Statusz,
 } from '@kartotek/shared';
 import { Elem, Kapcsolat } from '../../db/modellek.js';
-import { hiba400, hiba404, hiba409 } from '../../hibak.js';
+import { hiba400, hiba403, hiba404, hiba409 } from '../../hibak.js';
 import { ellenoriz } from '../../auth/rbac.js';
 import { ervenyesId } from '../kozos.js';
 import type { AktualisFelhasznalo } from '../../auth/plugin.js';
@@ -39,7 +39,11 @@ export async function kapcsolatLetrehozas(
   if (be.celElemId) {
     if (!ervenyesId(be.celElemId)) throw hiba400('Érvénytelen cél-azonosító.');
     const cel = await Elem.findById(be.celElemId).lean();
-    if (!cel) throw hiba404('A cél-elem nem található.');
+    // Csak olyan elemre köthető kapcsolat, amelyet a felhasználó olvashat. Az olvashatatlan
+    // cél ugyanúgy 404, mint a nem létező — ne legyen belőle létezés-orákulum.
+    const celOlvashato =
+      !!cel && (felh.globalisAdmin || felh.tagsagok.some((t) => t.alkalmazasKod === cel.alkalmazasKod));
+    if (!cel || !celOlvashato) throw hiba404('A cél-elem nem található.');
     celTipus = cel.tipusKod as TipusKod;
     if (lezart(cel.verziok)) throw hiba409('Lezárt (archivált/elvetett) elemmel nem köthető új aktív kapcsolat.');
   }
@@ -101,18 +105,51 @@ export async function kapcsolatTorles(id: string, felh: AktualisFelhasznalo): Pr
   await k.deleteOne();
 }
 
-/** Egy elem be- és kimenő kapcsolatai. */
-export async function kapcsolatokElemre(id: string): Promise<{
-  kimeno: Record<string, unknown>[];
-  bejovo: Record<string, unknown>[];
-}> {
+/**
+ * Egy elem be- és kimenő kapcsolatai, az olvasási hatókör szerint.
+ *
+ * Az elemnek magának olvashatónak kell lennie (különben 403, mint a részletnél).
+ * A spec szerint az alkalmazásközi kapcsolat „akkor látszik teljesen, ha mindkét
+ * véget olvashatod; egyébként hivatkozás-csonkként jelenik meg": a nem olvasható
+ * túloldali elem azonosítója kimarad, a kapcsolat `csonk: true` jelölést kap.
+ */
+export async function kapcsolatokElemre(
+  id: string,
+  lathato: string[] | 'mind',
+): Promise<{ kimeno: Record<string, unknown>[]; bejovo: Record<string, unknown>[] }> {
   if (!ervenyesId(id)) throw hiba400('Érvénytelen elem-azonosító.');
   const oid = new Types.ObjectId(id);
+  const sajat = await Elem.findById(oid).select('alkalmazasKod').lean();
+  if (!sajat) throw hiba404('Elem nem található');
+  const olvashato = (kod: string | undefined) => lathato === 'mind' || (!!kod && lathato.includes(kod));
+  if (!olvashato(sajat.alkalmazasKod)) throw hiba403('Nincs olvasási jogosultság ehhez az alkalmazáshoz.');
+
   const [kimeno, bejovo] = await Promise.all([
     Kapcsolat.find({ forrasElemId: oid }).lean(),
     Kapcsolat.find({ celElemId: oid }).lean(),
   ]);
-  const map = (a: Record<string, unknown>[]) =>
-    a.map(({ _id, __v, ...rest }) => ({ id: String(_id), ...rest }));
-  return { kimeno: map(kimeno), bejovo: map(bejovo) };
+
+  // A túloldali elemek alkalmazása (egy lekérdezésben) a csonkolás eldöntéséhez.
+  const tuloldal = [
+    ...kimeno.map((k) => k.celElemId).filter(Boolean),
+    ...bejovo.map((k) => k.forrasElemId),
+  ] as Types.ObjectId[];
+  const alkMap = new Map<string, string>();
+  if (lathato !== 'mind' && tuloldal.length) {
+    const docs = await Elem.find({ _id: { $in: tuloldal } }).select('alkalmazasKod').lean();
+    for (const d of docs) alkMap.set(String(d._id), d.alkalmazasKod);
+  }
+  const lathatoElem = (eid: unknown) => lathato === 'mind' || olvashato(alkMap.get(String(eid)));
+
+  const alap = ({ _id, __v, ...rest }: Record<string, unknown>) => ({ id: String(_id), ...rest });
+  return {
+    kimeno: kimeno.map((k) =>
+      !k.celElemId || lathatoElem(k.celElemId)
+        ? alap(k)
+        : { ...alap(k), celElemId: null, csonk: true },
+    ),
+    bejovo: bejovo.map((k) =>
+      lathatoElem(k.forrasElemId) ? alap(k) : { ...alap(k), forrasElemId: null, csonk: true },
+    ),
+  };
 }

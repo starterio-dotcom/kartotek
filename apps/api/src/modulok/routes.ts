@@ -70,8 +70,7 @@ export async function apiRoutes(appBase: FastifyInstance): Promise<void> {
 
   /* ---------- Szervezet ---------- */
   app.get('/api/szolgaltatasok', { schema: { tags: ['szervezet'] } }, async (req) => {
-    app.bejelentkezesKell(req);
-    return szervezet.szolgaltatasLista();
+    return szervezet.szolgaltatasLista(app.bejelentkezesKell(req));
   });
 
   app.post(
@@ -95,13 +94,11 @@ export async function apiRoutes(appBase: FastifyInstance): Promise<void> {
   );
 
   app.get('/api/alkalmazasok', { schema: { tags: ['szervezet'] } }, async (req) => {
-    app.bejelentkezesKell(req);
-    return szervezet.alkalmazasLista();
+    return szervezet.alkalmazasLista(app.bejelentkezesKell(req));
   });
 
   app.get('/api/felhasznalok', { schema: { tags: ['szervezet'] } }, async (req) => {
-    app.bejelentkezesKell(req);
-    return szervezet.felhasznaloLista();
+    return szervezet.felhasznaloLista(app.bejelentkezesKell(req));
   });
 
   app.patch(
@@ -222,8 +219,10 @@ export async function apiRoutes(appBase: FastifyInstance): Promise<void> {
     '/api/elemek/:id/kapcsolatok',
     { schema: { tags: ['kapcsolatok'], params: IdParam } },
     async (req) => {
-      app.bejelentkezesKell(req);
-      return kapcsolat.kapcsolatokElemre(req.params.id);
+      const felh = app.bejelentkezesKell(req);
+      // Az elemnek magának is olvashatónak kell lennie (mint a részletnél); a nem
+      // olvasható végű kapcsolatok hivatkozás-csonkként jönnek vissza.
+      return kapcsolat.kapcsolatokElemre(req.params.id, lathatoAlkalmazasok(felh));
     },
   );
 

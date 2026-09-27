@@ -7,6 +7,7 @@ import type {
   ElemOsszegzo,
   ElemKapcsolatok,
   Felhasznalo,
+  FelhasznaloListaTetel,
   HatasRiport,
   Kiadas,
   KiadasTartalom,
@@ -68,7 +69,7 @@ export function useAlkalmazasok() {
 export function useFelhasznalok() {
   return useQuery({
     queryKey: ['felhasznalok'],
-    queryFn: () => api.get<Felhasznalo[]>('/api/felhasznalok'),
+    queryFn: () => api.get<FelhasznaloListaTetel[]>('/api/felhasznalok'),
     staleTime: 5 * 60_000,
   });
 }

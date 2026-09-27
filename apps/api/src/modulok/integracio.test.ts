@@ -199,15 +199,67 @@ describe('kapcsolat CRUD + validáció', () => {
   });
 
   it('leváltja felvételekor felajánlja az Elavultba léptetést', async () => {
-    // azonos típusú (TUS) elemek között
+    // azonos típusú (TUS) elemek között, alkalmazásközi — mindkét véget olvasó felhasználóval
     const forras = await idByKulcs('3R-FE-TUS-002');
     const cel = await idByKulcs('Terminus-TAPI-TUS-001');
     const res = await hiv('POST', '/api/kapcsolatok', {
-      mint: ANNA,
+      mint: PETER,
       body: { forrasElemId: forras, celElemId: cel, fajta: 'leváltja' },
     });
     expect(res.statusCode).toBe(201);
     expect(res.json().felajanlElavultat).toBe(true);
+  });
+
+  it('nem olvasható cél-elemre nem köthető kapcsolat (404, nem létezés-orákulum)', async () => {
+    const forras = await idByKulcs('3R-FE-TUS-002');
+    const cel = await idByKulcs('Terminus-TAPI-TUS-001'); // Anna a Terminust nem olvashatja
+    const res = await hiv('POST', '/api/kapcsolatok', {
+      mint: ANNA,
+      body: { forrasElemId: forras, celElemId: cel, fajta: 'leváltja' },
+    });
+    expect(res.statusCode).toBe(404);
+  });
+});
+
+describe('olvasási hatókör: kapcsolatok, listák', () => {
+  it('idegen alkalmazás elemének kapcsolatai 403', async () => {
+    const terminus = await idByKulcs('Terminus-TAPI-TUS-001');
+    expect((await hiv('GET', `/api/elemek/${terminus}/kapcsolatok`, { mint: ANNA })).statusCode).toBe(403);
+  });
+
+  it('az alkalmazásközi kapcsolat a nem olvasható oldalon hivatkozás-csonk', async () => {
+    const r3 = await idByKulcs('3R-FE-TUS-002');
+    const term = await idByKulcs('Terminus-TAPI-TUS-001');
+    const k = await hiv('POST', '/api/kapcsolatok', {
+      mint: PETER,
+      body: { forrasElemId: r3, celElemId: term, fajta: 'függ tőle' },
+    });
+    expect(k.statusCode).toBe(201);
+    const kid = k.json().kapcsolat.id as string;
+
+    // Anna (3R): a kimenő kapcsolat látszik, de a Terminus-oldali azonosító nem.
+    const anna = (await hiv('GET', `/api/elemek/${r3}/kapcsolatok`, { mint: ANNA })).json();
+    const annaK = anna.kimeno.find((x: { id: string }) => x.id === kid);
+    expect(annaK).toMatchObject({ csonk: true, celElemId: null, fajta: 'függ tőle' });
+
+    // Dóra (Terminus): a bejövő kapcsolat forrása rejtett.
+    const dora = (await hiv('GET', `/api/elemek/${term}/kapcsolatok`, { mint: DORA })).json();
+    expect(dora.bejovo.find((x: { id: string }) => x.id === kid)).toMatchObject({ csonk: true, forrasElemId: null });
+
+    // Péter (globális Admin): teljes kapcsolat.
+    const peter = (await hiv('GET', `/api/elemek/${r3}/kapcsolatok`, { mint: PETER })).json();
+    const peterK = peter.kimeno.find((x: { id: string }) => x.id === kid);
+    expect(peterK.celElemId).toBe(term);
+    expect(peterK.csonk).toBeUndefined();
+  });
+
+  it('az alkalmazás- és szolgáltatáslista tagság szerint szűr', async () => {
+    const annaAlk = (await hiv('GET', '/api/alkalmazasok', { mint: ANNA })).json() as { kod: string }[];
+    expect(annaAlk.map((a) => a.kod)).toEqual(['3R']);
+    const peterAlk = (await hiv('GET', '/api/alkalmazasok', { mint: PETER })).json() as { kod: string }[];
+    expect(peterAlk.map((a) => a.kod).sort()).toEqual(['3R', 'Terminus']);
+    const annaSzolg = (await hiv('GET', '/api/szolgaltatasok', { mint: ANNA })).json() as { kod: string }[];
+    expect(annaSzolg.map((s) => s.kod)).toEqual(['FAIR']);
   });
 });
 
@@ -642,14 +694,20 @@ describe('kiadások (Fázis 6)', () => {
 });
 
 describe('felhasználó-szerepkörök kezelése (admin)', () => {
-  it('a lista a szerepköröket is visszaadja', async () => {
-    const lista = (await hiv('GET', '/api/felhasznalok', { mint: ANNA })).json() as {
+  it('globális Adminnak a lista a szerepköröket is visszaadja', async () => {
+    const lista = (await hiv('GET', '/api/felhasznalok', { mint: PETER })).json() as {
       email: string;
       tagsagok: { alkalmazasKod: string; szerepkor: string }[];
       globalisAdmin: boolean;
     }[];
     const peter = lista.find((u) => u.email === 'nagy.peter@pelda.hu');
     expect(peter?.globalisAdmin).toBe(true);
+  });
+
+  it('nem-adminnak csak azonosító + név (nincs e-mail, szerepkör, admin-jelző)', async () => {
+    const lista = (await hiv('GET', '/api/felhasznalok', { mint: ANNA })).json() as Record<string, unknown>[];
+    expect(lista.length).toBeGreaterThan(0);
+    for (const u of lista) expect(Object.keys(u).sort()).toEqual(['id', 'nev']);
   });
 
   it('globális Admin frissítheti a tagságokat, idegen 403', async () => {

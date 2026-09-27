@@ -2,7 +2,7 @@ import { SZEREPKOROK } from '@kartotek/shared';
 import { useFelhasznalok, useAlkalmazasok, useFelhasznaloFrissites } from '../api/hooks';
 import { useAuth } from '../allapot/auth';
 import { Betolto } from '../komponens/ui';
-import type { Felhasznalo } from '../api/tipusok';
+import type { FelhasznaloListaTetel } from '../api/tipusok';
 
 /** Admin-felület a felhasználói szerepkörökhöz (tagság alkalmazásonként + globális Admin). */
 export function Felhasznalok() {
@@ -21,7 +21,7 @@ export function Felhasznalok() {
   if (isLoading) return <Betolto />;
   const apps = alkalmazasok ?? [];
 
-  const szerepValt = (u: Felhasznalo, alkKod: string, szerep: string) => {
+  const szerepValt = (u: FelhasznaloListaTetel, alkKod: string, szerep: string) => {
     const tagsagok = (u.tagsagok ?? []).filter((t) => t.alkalmazasKod !== alkKod);
     if (szerep) tagsagok.push({ alkalmazasKod: alkKod, szerepkor: szerep as never });
     frissit.mutate({ id: u.id, tagsagok });
@@ -57,7 +57,7 @@ export function Felhasznalok() {
                 <td style={{ textAlign: 'center' }}>
                   <input
                     type="checkbox"
-                    checked={u.globalisAdmin}
+                    checked={u.globalisAdmin ?? false}
                     disabled={frissit.isPending}
                     onChange={(e) => frissit.mutate({ id: u.id, globalisAdmin: e.target.checked })}
                     aria-label={`${u.nev} — globális Admin`}

@@ -47,7 +47,9 @@ export function KapcsolatSzerk({
             .filter((k) => k.fajta === f)
             .map((k) => (
               <div className="kapcs-sor-szerk" key={k.id}>
-                {k.celElemId ? (
+                {k.csonk ? (
+                  <Csonk />
+                ) : k.celElemId ? (
                   <Link className="kapcs-link" to={`/elem/${k.celElemId}`}>{celCimke(k)}</Link>
                 ) : (
                   <span className="kapcs-kulso">{celCimke(k)}</span>
@@ -73,9 +75,13 @@ export function KapcsolatSzerk({
           {bejovo.map((k, i) => (
             <span key={k.id}>
               {i > 0 && ' · '}
-              <Link className="kapcs-link" to={`/elem/${k.forrasElemId}`}>
-                {kulcsMap.get(k.forrasElemId) ?? 'belső elem'}
-              </Link>{' '}
+              {k.csonk || !k.forrasElemId ? (
+                <Csonk />
+              ) : (
+                <Link className="kapcs-link" to={`/elem/${k.forrasElemId}`}>
+                  {kulcsMap.get(k.forrasElemId) ?? 'belső elem'}
+                </Link>
+              )}{' '}
               <span style={{ color: 'var(--t-leges)' }}>({k.fajta})</span>
             </span>
           ))}
@@ -96,6 +102,15 @@ export function KapcsolatSzerk({
         />
       )}
     </>
+  );
+}
+
+/** Hivatkozás-csonk: a túloldali elem létezik, de olyan alkalmazásban, amelyet nem olvashatsz. */
+function Csonk() {
+  return (
+    <span className="kapcs-kulso" title="A kapcsolt elem olyan alkalmazásban van, amelyhez nincs olvasási jogosultságod.">
+      🔒 nem látható elem
+    </span>
   );
 }
 

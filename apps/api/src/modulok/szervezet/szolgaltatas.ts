@@ -6,12 +6,29 @@ import { ervenyesId } from '../kozos.js';
 
 const valasz = ({ _id, __v, ...rest }: Record<string, unknown>) => ({ id: String(_id), ...rest });
 
-export async function szolgaltatasLista(): Promise<Record<string, unknown>[]> {
-  return (await Szolgaltatas.find().sort({ kod: 1 }).lean()).map(valasz);
+/** A felhasználó tagságai szerinti alkalmazáskódok (globális Admin: mind). */
+function lathatoKodok(felh: AktualisFelhasznalo): Set<string> | 'mind' {
+  return felh.globalisAdmin ? 'mind' : new Set(felh.tagsagok.map((t) => t.alkalmazasKod));
 }
 
-/** Felhasználók megjelenítési + szerepkör-adatai (név-feloldáshoz és az admin-kezeléshez). */
-export async function felhasznaloLista(): Promise<Record<string, unknown>[]> {
+/** Szolgáltatások — tagság szerint: csak azok, amelyekben van látható alkalmazás. */
+export async function szolgaltatasLista(felh: AktualisFelhasznalo): Promise<Record<string, unknown>[]> {
+  const lathato = lathatoKodok(felh);
+  if (lathato === 'mind') return (await Szolgaltatas.find().sort({ kod: 1 }).lean()).map(valasz);
+  const szolgKodok = await Alkalmazas.distinct('szolgaltatasKod', { kod: { $in: [...lathato] } });
+  return (await Szolgaltatas.find({ kod: { $in: szolgKodok } }).sort({ kod: 1 }).lean()).map(valasz);
+}
+
+/**
+ * Felhasználólista. Globális Adminnak a teljes szerepkör-adat (kezeléshez); mindenki
+ * másnak CSAK azonosító + név — a megjegyzés-/napló-szerzők nevének feloldásához ennyi
+ * kell, az e-mail (PII) és a szerepkör-mátrix (ki az Admin?) nem tartozik rájuk.
+ */
+export async function felhasznaloLista(felh: AktualisFelhasznalo): Promise<Record<string, unknown>[]> {
+  if (!felh.globalisAdmin) {
+    const docs = await Felhasznalo.find().select('nev').sort({ nev: 1 }).lean();
+    return docs.map((f) => ({ id: String(f._id), nev: f.nev }));
+  }
   const docs = await Felhasznalo.find().select('nev email tagsagok globalisAdmin').sort({ nev: 1 }).lean();
   return docs.map((f) => ({
     id: String(f._id),
@@ -61,8 +78,11 @@ export async function szolgaltatasFrissites(
   return valasz(doc.toObject());
 }
 
-export async function alkalmazasLista(): Promise<Record<string, unknown>[]> {
-  return (await Alkalmazas.find().sort({ kod: 1 }).lean()).map(valasz);
+/** Alkalmazások — tagság szerint szűrve (globális Admin: mind). */
+export async function alkalmazasLista(felh: AktualisFelhasznalo): Promise<Record<string, unknown>[]> {
+  const lathato = lathatoKodok(felh);
+  const q = lathato === 'mind' ? {} : { kod: { $in: [...lathato] } };
+  return (await Alkalmazas.find(q).sort({ kod: 1 }).lean()).map(valasz);
 }
 
 export async function alkalmazasLetrehozas(
