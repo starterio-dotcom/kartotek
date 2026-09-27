@@ -6,6 +6,7 @@ import type {
   Elem,
   ElemOsszegzo,
   ElemKapcsolatok,
+  ErtesitesLista,
   Felhasznalo,
   FelhasznaloListaTetel,
   HatasRiport,
@@ -59,6 +60,24 @@ export function useAudit(szuro: AuditSzuro, engedve: boolean) {
     queryFn: () => api.get<AuditLista>(`/api/audit?${p.toString()}`),
     enabled: engedve,
     placeholderData: (elozo) => elozo, // lapozáskor ne ugráljon a táblázat
+  });
+}
+
+/** A saját felületi értesítések — percenként frissül (olcsó, a lista kicsi). */
+export function useErtesitesek(engedve: boolean) {
+  return useQuery({
+    queryKey: ['ertesitesek'],
+    queryFn: () => api.get<ErtesitesLista>('/api/ertesitesek?limit=20'),
+    enabled: engedve,
+    refetchInterval: 60_000,
+  });
+}
+
+export function useErtesitesOlvasva() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (idk?: string[]) => api.post<{ olvasatlan: number }>('/api/ertesitesek/olvasva', idk ? { idk } : {}),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['ertesitesek'] }),
   });
 }
 

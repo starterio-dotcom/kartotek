@@ -4,10 +4,12 @@ import mongoose from 'mongoose';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import { buildApp } from '../app.js';
 import { seedAdatbazis } from '../seed/seed.js';
-import { Elem, AuditBejegyzes } from '../db/modellek.js';
+import { Elem, AuditBejegyzes, Ertesites } from '../db/modellek.js';
+import { MemoriaKuldo } from '../ertesites/email.js';
 
 let replset: MongoMemoryReplSet;
 let app: FastifyInstance;
+let posta: MemoriaKuldo;
 
 const ANNA = 'kiss.anna@pelda.hu'; // Szerző @ 3R
 const PETER = 'nagy.peter@pelda.hu'; // globális Admin
@@ -16,7 +18,8 @@ const DORA = 'varga.dora@pelda.hu'; // Szerző @ Terminus
 beforeAll(async () => {
   replset = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
   await mongoose.connect(replset.getUri(), { directConnection: true });
-  app = await buildApp();
+  posta = new MemoriaKuldo();
+  app = await buildApp({ emailKuldo: posta });
   await app.ready();
   await Elem.init(); // az indexek (köztük a text index) felépülésének bevárása
 }, 120_000);
@@ -397,6 +400,109 @@ describe('elemlista: lapozás + projekció', () => {
     expect(elemek.length).toBeGreaterThan(0);
     expect(Number(r.headers['x-osszes'])).toBe(elemek.length);
     expect(elemek.every((e) => e.verziok.some((v) => v.statusz === 'Hatályos'))).toBe(true);
+  });
+});
+
+describe('értesítések (felület + e-mail)', () => {
+  type E = { id: string; esemeny: string; elemKulcs: string; uzenet: string; olvasva: string | null };
+  const sajat = async (mint: string) =>
+    (await hiv('GET', '/api/ertesitesek', { mint })).json() as { ertesitesek: E[]; olvasatlan: number };
+
+  async function vazlatBekuldve(): Promise<{ id: string; kulcs: string }> {
+    const r = await hiv('POST', '/api/elemek', {
+      mint: ANNA,
+      body: { alkalmazasKod: '3R', tipusKod: 'BUS', cim: 'Értesítés-teszt', leirasMd: 'tartalom' },
+    });
+    const { id, kulcs } = r.json();
+    expect((await hiv('POST', `/api/elemek/${id}/verziok/1/bekuldes`, { mint: ANNA })).statusCode).toBe(200);
+    return { id, kulcs };
+  }
+
+  it('beküldés → a döntéshozó kap felületi és e-mail értesítést, a beküldő és a többi szerző nem', async () => {
+    await Ertesites.deleteMany({});
+    posta.levelek.length = 0;
+    const { kulcs } = await vazlatBekuldve();
+    await app.ertesito.flush();
+
+    // A 3R-nek nincs Jóváhagyója/Adminja → a globális Admin (Péter) kapja.
+    const peter = await sajat(PETER);
+    expect(peter.ertesitesek[0]).toMatchObject({ esemeny: 'bekuldes', elemKulcs: kulcs });
+    expect(peter.olvasatlan).toBe(1);
+    expect((await sajat(ANNA)).ertesitesek).toHaveLength(0);
+    expect((await sajat('szabo.julia@pelda.hu')).ertesitesek).toHaveLength(0);
+
+    expect(posta.levelek).toHaveLength(1);
+    expect(posta.levelek[0]).toMatchObject({ cimzett: PETER, targy: `Véleményezésre vár: ${kulcs} v1` });
+    expect(posta.levelek[0]!.szoveg).toMatch(/\/elem\/[0-9a-f]{24}/);
+  });
+
+  it('visszadobás → a szerző kapja az indoklással; újrabeküldéskor a bíráló ismét értesül', async () => {
+    await Ertesites.deleteMany({});
+    const { id } = await vazlatBekuldve();
+    await hiv('POST', `/api/elemek/${id}/verziok/1/visszadobas`, {
+      mint: PETER,
+      body: { indoklas: 'Hiányzik az elfogadási feltétel.' },
+    });
+    await app.ertesito.flush();
+    const anna = await sajat(ANNA);
+    expect(anna.ertesitesek[0]).toMatchObject({ esemeny: 'visszadobas' });
+    expect(anna.ertesitesek[0]!.uzenet).toContain('Hiányzik az elfogadási feltétel.');
+
+    // Regresszió: a visszadobás „→ Vázlat" naplóbejegyzése miatt a bíráló NEM lehet szerző.
+    await Ertesites.deleteMany({});
+    await hiv('POST', `/api/elemek/${id}/verziok/1/bekuldes`, { mint: ANNA });
+    await app.ertesito.flush();
+    expect((await sajat(PETER)).ertesitesek[0]).toMatchObject({ esemeny: 'bekuldes' });
+  });
+
+  it('jóváhagyás → a szerző értesül; megjegyzés → a másik fél; válasz → a szülő szerzője', async () => {
+    const { id } = await vazlatBekuldve();
+    await Ertesites.deleteMany({});
+
+    const mj = await hiv('POST', `/api/elemek/${id}/verziok/1/megjegyzesek`, {
+      mint: PETER,
+      body: { szoveg: 'Pontosítsd a határidőt.' },
+    });
+    await app.ertesito.flush();
+    expect((await sajat(ANNA)).ertesitesek[0]).toMatchObject({ esemeny: 'megjegyzes' });
+
+    const mjid = (mj.json().verziok[0].megjegyzesek as { mjid: string }[])[0]!.mjid;
+    await hiv('POST', `/api/elemek/${id}/verziok/1/megjegyzesek`, {
+      mint: ANNA,
+      body: { szoveg: 'Javítottam.', valaszMjid: mjid },
+    });
+    await app.ertesito.flush();
+    expect((await sajat(PETER)).ertesitesek[0]).toMatchObject({ esemeny: 'megjegyzes' });
+
+    await hiv('POST', `/api/elemek/${id}/verziok/1/jovahagyas`, {
+      mint: PETER,
+      body: { hatalyKezdet: '2030-01-01' },
+    });
+    await app.ertesito.flush();
+    const anna = (await sajat(ANNA)).ertesitesek[0]!;
+    expect(anna.esemeny).toBe('jovahagyas');
+    expect(anna.uzenet).toContain('2030-01-01');
+  });
+
+  it('olvasottra állítás csak a saját értesítésen; üres törzzsel mind', async () => {
+    await Ertesites.deleteMany({});
+    await vazlatBekuldve();
+    await vazlatBekuldve();
+    await app.ertesito.flush();
+    const peter = await sajat(PETER);
+    expect(peter.olvasatlan).toBe(2);
+
+    // Anna nem állíthatja olvasottra Péter értesítését.
+    await hiv('POST', '/api/ertesitesek/olvasva', { mint: ANNA, body: { idk: [peter.ertesitesek[0]!.id] } });
+    expect((await sajat(PETER)).olvasatlan).toBe(2);
+
+    const egy = await hiv('POST', '/api/ertesitesek/olvasva', {
+      mint: PETER,
+      body: { idk: [peter.ertesitesek[0]!.id] },
+    });
+    expect(egy.json().olvasatlan).toBe(1);
+    const mind = await hiv('POST', '/api/ertesitesek/olvasva', { mint: PETER, body: {} });
+    expect(mind.json().olvasatlan).toBe(0);
   });
 });
 

@@ -21,6 +21,8 @@ function elesGuard(): void {
     );
   if (!config.mellekletTitok)
     throw new Error('Éles indulás megtagadva: MELLEKLET_URL_SECRET megadása kötelező.');
+  if (config.ertesitesEmail === 'smtp' && !config.smtp.host)
+    throw new Error('Éles indulás megtagadva: ERTESITES_EMAIL=smtp mellett SMTP_HOST megadása kötelező.');
 }
 
 /** A konfigurált hitelesítési provider (dev fejléc vagy OIDC + JWKS). */

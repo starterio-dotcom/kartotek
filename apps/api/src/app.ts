@@ -16,6 +16,8 @@ import { hibakezeloRegisztracio } from './hibak.js';
 import { authPlugin } from './auth/plugin.js';
 import { biztonsagPlugin } from './biztonsag/plugin.js';
 import { auditPlugin } from './audit/plugin.js';
+import { ertesitesPlugin } from './ertesites/plugin.js';
+import type { EmailKuldo } from './ertesites/email.js';
 import type { AuthProvider } from './auth/provider.js';
 import { apiRoutes } from './modulok/routes.js';
 import { LemezTarhely, type Tarhely } from './tarhely/tarhely.js';
@@ -29,6 +31,8 @@ declare module 'fastify' {
 export interface AppOpciok {
   authProvider?: AuthProvider;
   tarhely?: Tarhely;
+  /** Az értesítő e-mail csatorna felülírása (tesztekhez). */
+  emailKuldo?: EmailKuldo;
 }
 
 export async function buildApp(opts: AppOpciok = {}): Promise<FastifyInstance> {
@@ -59,6 +63,7 @@ export async function buildApp(opts: AppOpciok = {}): Promise<FastifyInstance> {
   await app.register(authPlugin, { ...(opts.authProvider ? { provider: opts.authProvider } : {}) });
   // Az audit a hitelesítés UTÁN (az onResponse-ban már ismert a felhasználó).
   await app.register(auditPlugin);
+  await app.register(ertesitesPlugin, { ...(opts.emailKuldo ? { kuldo: opts.emailKuldo } : {}) });
 
   app.decorate('tarhely', opts.tarhely ?? new LemezTarhely(config.tarhelyDir));
 

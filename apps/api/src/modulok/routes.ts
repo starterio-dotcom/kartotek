@@ -37,6 +37,7 @@ import { auditLista } from '../audit/szolgaltatas.js';
 import { exportAdat, type ExportAdat } from '../export/adat.js';
 import { csvKeszit } from '../export/csv.js';
 import { reqifKeszit } from '../export/reqif.js';
+import { ertesitesLista, olvasottraAllit } from '../ertesites/szolgaltatas.js';
 import { globalisAdminKell } from '../auth/plugin.js';
 
 const IdParam = z.object({ id: z.string() });
@@ -293,7 +294,12 @@ export async function apiRoutes(appBase: FastifyInstance): Promise<void> {
       },
     );
 
-  leptetes('bekuldes', (id, v, felh) => verzio.bekuldes(id, v, felh));
+  // Beküldés → az alkalmazás Jóváhagyói értesítést kapnak (spec: Értesítések).
+  leptetes('bekuldes', async (id, v, felh) => {
+    const elem = await verzio.bekuldes(id, v, felh);
+    app.ertesito.esemeny({ esemeny: 'bekuldes', elem, verzioSzam: v, felh });
+    return elem;
+  });
   leptetes('visszavonas', (id, v, felh) => verzio.visszavonas(id, v, felh));
   leptetes('ujverzio', (id, v, felh) => verzio.ujVerzio(id, v, felh));
   leptetes('archivalas', (id, v, felh) => verzio.archivalas(id, v, felh));
@@ -303,7 +309,17 @@ export async function apiRoutes(appBase: FastifyInstance): Promise<void> {
     { schema: { tags: ['verziók'], params: VerzioParam, body: JovahagyasDto } },
     async (req) => {
       const felh = app.bejelentkezesKell(req);
-      return verzio.jovahagyas(req.params.id, req.params.v, req.body, felh);
+      const elem = await verzio.jovahagyas(req.params.id, req.params.v, req.body, felh);
+      const k = req.body.hatalyKezdet.toISOString().slice(0, 10);
+      const vg = req.body.hatalyVeg ? req.body.hatalyVeg.toISOString().slice(0, 10) : 'visszavonásig';
+      app.ertesito.esemeny({
+        esemeny: 'jovahagyas',
+        elem,
+        verzioSzam: req.params.v,
+        felh,
+        reszlet: `hatály: ${k} – ${vg}`,
+      });
+      return elem;
     },
   );
 
@@ -312,7 +328,15 @@ export async function apiRoutes(appBase: FastifyInstance): Promise<void> {
     { schema: { tags: ['verziók'], params: VerzioParam, body: IndoklasDto } },
     async (req) => {
       const felh = app.bejelentkezesKell(req);
-      return verzio.visszadobas(req.params.id, req.params.v, req.body.indoklas, felh);
+      const elem = await verzio.visszadobas(req.params.id, req.params.v, req.body.indoklas, felh);
+      app.ertesito.esemeny({
+        esemeny: 'visszadobas',
+        elem,
+        verzioSzam: req.params.v,
+        felh,
+        reszlet: req.body.indoklas,
+      });
+      return elem;
     },
   );
 
@@ -362,8 +386,41 @@ export async function apiRoutes(appBase: FastifyInstance): Promise<void> {
     async (req, reply) => {
       const felh = app.bejelentkezesKell(req);
       reply.code(201);
-      return velemenyezes.megjegyzesLetrehozas(req.params.id, req.params.v, req.body, felh);
+      const elem = await velemenyezes.megjegyzesLetrehozas(req.params.id, req.params.v, req.body, felh);
+      // Új megjegyzés → a másik fél (Szerző ↔ Jóváhagyó); válasznál a szülő szerzője is.
+      app.ertesito.esemeny({
+        esemeny: 'megjegyzes',
+        elem,
+        verzioSzam: req.params.v,
+        felh,
+        reszlet: req.body.szoveg,
+        ...(req.body.valaszMjid ? { valaszMjid: req.body.valaszMjid } : {}),
+      });
+      return elem;
     },
+  );
+
+  /* ---------- Felületi értesítések (csak a saját) ---------- */
+  app.get(
+    '/api/ertesitesek',
+    {
+      schema: {
+        tags: ['értesítések'],
+        querystring: z.object({ limit: z.coerce.number().int().min(1).max(100).default(20) }),
+      },
+    },
+    async (req) => ertesitesLista(app.bejelentkezesKell(req).id, req.query.limit),
+  );
+
+  app.post(
+    '/api/ertesitesek/olvasva',
+    {
+      schema: {
+        tags: ['értesítések'],
+        body: z.object({ idk: z.array(z.string()).optional() }).optional(),
+      },
+    },
+    async (req) => olvasottraAllit(app.bejelentkezesKell(req).id, req.body?.idk),
   );
 
   app.post(

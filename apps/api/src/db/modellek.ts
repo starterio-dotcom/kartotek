@@ -297,7 +297,36 @@ export const Felhasznalo = model('Felhasznalo', FelhasznaloSchema);
 export const Tipus = model('Tipus', TipusSchema);
 export const Reteg = model('Reteg', RetegSchema);
 export const JovahagyasiSzabaly = model('JovahagyasiSzabaly', JovahagyasiSzabalySchema);
+/**
+ * Felületi értesítés (a spec szerint az alapcsatorna; az e-mail opcionális).
+ * Egy dokumentum = egy címzett egy eseményről. Rövid életű: TTL-lel törlődik
+ * (a tett maga az audit-naplóban és a státusznaplóban marad meg).
+ */
+const ErtesitesSchema = new Schema(
+  {
+    cimzettId: { type: Schema.Types.ObjectId, ref: 'Felhasznalo', required: true },
+    esemeny: { type: String, enum: ['bekuldes', 'jovahagyas', 'visszadobas', 'megjegyzes'], required: true },
+    elemId: { type: Schema.Types.ObjectId, ref: 'Elem', required: true },
+    elemKulcs: { type: String, required: true },
+    verzioSzam: { type: Number, required: true },
+    cim: { type: String, required: true },
+    uzenet: { type: String, required: true },
+    kiId: { type: Schema.Types.ObjectId, ref: 'Felhasznalo', default: null },
+    kiNev: { type: String, default: null },
+    letrehozva: { type: Date, required: true, default: Date.now },
+    olvasva: { type: Date, default: null },
+  },
+  { versionKey: false },
+);
+ErtesitesSchema.index({ cimzettId: 1, letrehozva: -1 });
+ErtesitesSchema.index({ cimzettId: 1, olvasva: 1 });
+ErtesitesSchema.index(
+  { letrehozva: 1 },
+  { expireAfterSeconds: Math.round(Math.max(1, config.ertesitesMegorzesNap) * 86_400) },
+);
+
 export const UtemezoZar = model('UtemezoZar', UtemezoZarSchema);
+export const Ertesites = model('Ertesites', ErtesitesSchema);
 export const AuditBejegyzes = model('AuditBejegyzes', AuditBejegyzesSchema);
 
 export type ElemDoc = InferSchemaType<typeof ElemSchema>;

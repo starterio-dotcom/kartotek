@@ -176,6 +176,25 @@ export type ElemOsszegzo = Pick<Elem, 'id' | 'kulcs' | 'tipusKod' | 'alkalmazasK
   verziok: VerzioOsszegzo[];
 };
 
+export interface Ertesites {
+  id: string;
+  esemeny: 'bekuldes' | 'jovahagyas' | 'visszadobas' | 'megjegyzes';
+  elemId: string;
+  elemKulcs: string;
+  verzioSzam: number;
+  cim: string;
+  uzenet: string;
+  kiId: string | null;
+  kiNev: string | null;
+  letrehozva: string;
+  olvasva: string | null;
+}
+
+export interface ErtesitesLista {
+  ertesitesek: Ertesites[];
+  olvasatlan: number;
+}
+
 export interface AuditBejegyzes {
   id: string;
   idopont: string;

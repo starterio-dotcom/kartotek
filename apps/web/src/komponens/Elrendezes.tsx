@@ -7,6 +7,7 @@ import { api } from '../api/kliens';
 import { ListaPanel } from '../nezet/ListaPanel';
 import { Graf } from '../nezet/Graf';
 import { UjElemModal } from '../nezet/UjElemModal';
+import { ErtesitesHarang } from './ErtesitesHarang';
 
 function maStr() {
   return new Date().toISOString().slice(0, 10);
@@ -134,6 +135,7 @@ export function Elrendezes() {
           {oidc ? (
             felhasznalo ? (
               <>
+                <ErtesitesHarang />
                 <span className="felh-nev" title={felhasznalo.email}>{felhasznalo.nev}</span>
                 <button className="gomb masodlagos" onClick={logout}>Kilépés</button>
               </>
@@ -141,6 +143,8 @@ export function Elrendezes() {
               <button className="gomb elsodleges" onClick={login}>Bejelentkezés</button>
             )
           ) : (
+            <>
+            {felhasznalo && <ErtesitesHarang />}
             <select
               aria-label="Felhasználó (dev)"
               value={felhasznalo?.email ?? ''}
@@ -153,6 +157,7 @@ export function Elrendezes() {
                 </option>
               ))}
             </select>
+            </>
           )}
         </div>
 

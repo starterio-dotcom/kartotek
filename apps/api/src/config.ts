@@ -61,6 +61,24 @@ export const config = {
   auditOlvasas: (process.env.AUDIT_OLVASAS ?? 'true') === 'true',
   /** Audit-napló megőrzési ideje napokban; 0 = korlátlan (állami megőrzési kötelezettség). */
   auditMegorzesNap: Number(process.env.AUDIT_MEGORZES_NAP ?? 0),
+  /** Az alkalmazás nyilvános címe (az értesítésekben lévő hivatkozásokhoz). */
+  alkalmazasUrl: (process.env.ALKALMAZAS_URL ?? 'http://localhost:5173').replace(/\/$/, ''),
+  /** Értesítések e-mail csatornája: 'ki' | 'naplo' (alap: csak naplóz) | 'smtp' (valódi küldés).
+   *  A felületi értesítés ettől függetlenül mindig működik (a spec szerint az az alapcsatorna). */
+  ertesitesEmail: (process.env.ERTESITES_EMAIL ?? 'naplo') as 'ki' | 'naplo' | 'smtp',
+  ertesitesFelado: process.env.ERTESITES_FELADO ?? 'Kartotékrendszer <noreply@localhost>',
+  /** Biztonsági szelep: ha meg van adva, CSAK ezekre a domainekre megy e-mail (pl. a demo
+   *  felhasználók címei ne jussanak el idegen, valós domainre). */
+  ertesitesEmailDomainek: lista(process.env.ERTESITES_EMAIL_DOMAINEK)?.map((d) => d.toLowerCase()),
+  smtp: {
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT ?? 587),
+    secure: (process.env.SMTP_SECURE ?? 'false') === 'true',
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+  /** A felületi értesítések megőrzése napokban (TTL index). */
+  ertesitesMegorzesNap: Number(process.env.ERTESITES_MEGORZES_NAP ?? 365),
   /** A szerveroldali ütemező automatizmusa (dátumvezérelt átmenetek). */
   utemezoAktiv: (process.env.UTEMEZO_AKTIV ?? 'true') === 'true',
   /** Az ütemező ellenőrzési gyakorisága ms-ben (alap óránként). */

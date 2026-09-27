@@ -44,6 +44,8 @@ export function auditEsemeny(
 ): AuditEsemeny | null {
   if (!utvonal) return null; // illeszkedés nélküli út (404-es szkenner-zaj)
   if (utvonal === '/health' || utvonal.startsWith('/dok')) return null;
+  // A saját értesítés olvasottra állítása felhasználói állapot, nem üzleti rekord-változás.
+  if (utvonal === '/api/ertesitesek/olvasva') return null;
   if (statusz === 429) return null; // túlterhelés: a request-log rögzíti, a DB-t nem áraszthatja el
   if (statusz === 401 || statusz === 403) return 'hozzaferes-megtagadva';
   if (MODOSITO.has(metodus)) return 'modositas';

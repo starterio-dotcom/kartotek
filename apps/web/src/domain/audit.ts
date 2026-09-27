@@ -48,6 +48,7 @@ const MUVELETEK: Record<string, string> = {
   'GET /api/audit': 'Audit-napló lekérdezése',
   'GET /api/export/csv': 'Export (CSV)',
   'GET /api/export/reqif': 'Export (ReqIF)',
+  'GET /api/ertesitesek': 'Értesítések lekérése',
 };
 
 export function muveletCimke(metodus: string, utvonal: string, esemeny?: AuditEsemeny): string {
