@@ -1,37 +1,30 @@
 import {
   szabad,
+  verzioSzerzoIds,
   type Muvelet,
   type Kontextus,
   type VerzioCtx,
   type Statusz,
+  type SzerzoForras,
   VEGALLAPOTOK,
 } from '@kartotek/shared';
 import { hiba403 } from '../hibak.js';
 import type { AktualisFelhasznalo } from './plugin.js';
 
-interface VerzioSzeru {
+interface VerzioSzeru extends SzerzoForras {
   verzioSzam: number;
   statusz: string;
-  modositottaId?: unknown;
-  szerkesztok?: unknown[];
-  statusznaplo?: { ki: string }[];
 }
 
 /**
- * A verzió szerzői/szerkesztői a négy-szem-elvhez: MINDEN tartalom-szerkesztő
- * (`szerkesztok` — minden szerkesztés rögzíti, így a több-szerzős vázlat sem
- * játszható ki), a legutóbbi módosító, és a napló nem-RENDSZER szereplői.
- * A puszta véleményező/megjegyző NEM számít szerkesztőnek — a Jóváhagyó dolga
- * épp a véleményezés, őt nem zárjuk ki a jóváhagyásból.
+ * A verzió szerzői a négy-szem-elvhez — a `shared` egyetlen igazsága (a FE és az
+ * értesítés-címzés is ezt használja): minden tartalom-szerkesztő (`szerkesztok`, így a
+ * több-szerzős vázlat sem játszható ki), a legutóbbi módosító, a létrehozó és a beküldő.
+ * A bíráló (visszadobás) és a puszta véleményező NEM szerző — a Jóváhagyó dolga épp a
+ * véleményezés, őt nem zárjuk ki a jóváhagyásból.
  */
 export function szerkesztoIds(verzio: VerzioSzeru): string[] {
-  const halmaz = new Set<string>();
-  if (verzio.modositottaId != null) halmaz.add(String(verzio.modositottaId));
-  for (const sz of verzio.szerkesztok ?? []) if (sz != null) halmaz.add(String(sz));
-  for (const n of verzio.statusznaplo ?? []) {
-    if (n.ki && n.ki !== 'RENDSZER') halmaz.add(n.ki);
-  }
-  return [...halmaz];
+  return verzioSzerzoIds(verzio);
 }
 
 export function verzioCtx(verzio: VerzioSzeru): VerzioCtx {

@@ -1,5 +1,6 @@
 import type { FastifyBaseLogger } from 'fastify';
 import { Types } from 'mongoose';
+import { verzioSzerzoIds } from '@kartotek/shared';
 import { Ertesites, Felhasznalo } from '../db/modellek.js';
 import { config } from '../config.js';
 import type { AktualisFelhasznalo } from '../auth/plugin.js';
@@ -30,19 +31,11 @@ type Verzio = {
 const ervenyes = (x: unknown): x is string | Types.ObjectId => !!x && Types.ObjectId.isValid(String(x));
 
 /**
- * A verzió szerzői: minden tartalom-szerkesztő, a módosító, a létrehozó és a beküldő.
- * FIGYELEM: a naplóban a `→ Vázlat` a visszadobás is (ott a BÍRÁLÓ a `ki`), ezért csak a
- * forrás nélküli `Vázlat`-bejegyzés (létrehozás / új verzió nyitása) számít szerzőnek.
+ * A verzió szerzői — ugyanaz a `shared` szabály, mint a négy-szem-elvnél (a bíráló NEM szerző),
+ * csak érvényes felhasználó-azonosítókra szűrve.
  */
 function szerzok(v: Verzio): Set<string> {
-  const h = new Set<string>();
-  for (const s of v.szerkesztok ?? []) if (ervenyes(s)) h.add(String(s));
-  if (ervenyes(v.modositottaId)) h.add(String(v.modositottaId));
-  for (const n of v.statusznaplo ?? []) {
-    const letrehozas = n.hova === 'Vázlat' && !n.honnan;
-    if ((n.hova === 'Véleményezés' || letrehozas) && ervenyes(n.ki)) h.add(String(n.ki));
-  }
-  return h;
+  return new Set(verzioSzerzoIds(v).filter(ervenyes));
 }
 
 /**

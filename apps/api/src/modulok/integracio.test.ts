@@ -577,6 +577,14 @@ describe('értesítések (felület + e-mail)', () => {
     await hiv('POST', `/api/elemek/${id}/verziok/1/bekuldes`, { mint: ANNA });
     await app.ertesito.flush();
     expect((await sajat(PETER)).ertesitesek[0]).toMatchObject({ esemeny: 'bekuldes' });
+
+    // Regresszió (négy-szem holtpont): a visszadobó bíráló az újraküldés után JÓVÁHAGYHAT.
+    const jov = await hiv('POST', `/api/elemek/${id}/verziok/1/jovahagyas`, {
+      mint: PETER,
+      body: { hatalyKezdet: '2030-01-01', hatalyVeg: null },
+    });
+    expect(jov.statusCode).toBe(200);
+    expect(jov.json().verziok[0].statusz).toBe('Jóváhagyott');
   });
 
   it('jóváhagyás → a szerző értesül; megjegyzés → a másik fél; válasz → a szülő szerzője', async () => {
