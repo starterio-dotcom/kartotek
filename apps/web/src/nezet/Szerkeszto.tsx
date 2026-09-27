@@ -20,7 +20,7 @@ export function Szerkeszto({
   const qc = useQueryClient();
   // Optimista zár: a szerkesztő MEGNYITÁSAKORI revízió az alap (a cache közben frissülhet).
   const [alapRevizio] = useState(() => verzio.revizio ?? 0);
-  const tm = verzio.tipusMezok as { rovid?: string; elofeltetelek?: string; kriteriumok?: string };
+  const tm = (verzio.tipusMezok ?? {}) as { rovid?: string; elofeltetelek?: string; kriteriumok?: string };
   const dokumentum = elem.tipusKod === 'BD' || elem.tipusKod === 'TD';
   const [rovid, setRovid] = useState(tm.rovid ?? '');
   const [elofeltetelek, setElofeltetelek] = useState(tm.elofeltetelek ?? '');

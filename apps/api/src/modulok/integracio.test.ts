@@ -403,6 +403,20 @@ describe('elemlista: lapozás + projekció', () => {
   });
 });
 
+describe('válasz-szerződés', () => {
+  it('típusmezők nélkül létrehozott elemnél is objektum a tipusMezok (a felület erre épít)', async () => {
+    // Regresszió: a Mongoose az üres objektumot mentéskor elhagyja → a kartoték-nézet
+    // `tm.rovid` olvasása elszállt (üres oldal) minden frissen létrehozott elemnél.
+    const letre = await hiv('POST', '/api/elemek', {
+      mint: ANNA,
+      body: { alkalmazasKod: '3R', tipusKod: 'BUS', cim: 'Szerződés-teszt', leirasMd: 'x' },
+    });
+    expect(letre.json().verziok[0].tipusMezok).toEqual({});
+    const reszlet = await hiv('GET', `/api/elemek/${letre.json().id}`, { mint: ANNA });
+    expect(reszlet.json().verziok[0].tipusMezok).toEqual({});
+  });
+});
+
 describe('jogi zárolás (legal hold)', () => {
   const OK = 'Hatósági megkeresés 2026/17';
   const zarol = (id: string, aktiv: boolean, mint = PETER) =>

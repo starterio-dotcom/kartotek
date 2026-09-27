@@ -68,6 +68,10 @@ export function elemValasz(doc: Record<string, unknown>): Record<string, unknown
   const verziok = Array.isArray(rest.verziok)
     ? (rest.verziok as Record<string, unknown>[]).map((v) => ({
         ...v,
+        // A Mongoose mentéskor elhagyja az üres objektumot (minimize), így az üres
+        // típusmezős verzióból hiányozna a mező — a teljes verzió-válaszban mindig objektum.
+        // (Az összegző lista-projekció szándékosan nem tartalmazza: ott nincs is napló.)
+        ...(v.tipusMezok === undefined && 'statusznaplo' in v ? { tipusMezok: {} } : {}),
         mellekletek: Array.isArray(v.mellekletek)
           ? (v.mellekletek as Record<string, unknown>[]).map((m) => {
               const vanTartalom = tarolt((m.figmaPng ?? m.tartalomHiv) as string | undefined);

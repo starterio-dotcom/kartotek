@@ -75,7 +75,7 @@ export function Kartotek() {
     ver.statusz === 'Vázlat' &&
     szabad('vázlat.szerkesztés', { felhasznalo, alkalmazasKod: elem.alkalmazasKod });
 
-  const tm = ver.tipusMezok as {
+  const tm = (ver.tipusMezok ?? {}) as {
     rovid?: string;
     elofeltetelek?: string;
     kriteriumok?: string;

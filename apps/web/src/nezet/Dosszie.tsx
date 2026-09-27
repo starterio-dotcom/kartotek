@@ -195,7 +195,7 @@ function ElemSzakasz({ fa, szulok }: { fa: FaElem; szulok: string[] }) {
   const { elem, verzio, melyseg } = fa;
   const uzleti = uzletiTipus(elem.tipusKod);
   const dokumentum = elem.tipusKod === 'BD' || elem.tipusKod === 'TD';
-  const tm = verzio.tipusMezok as {
+  const tm = (verzio.tipusMezok ?? {}) as {
     rovid?: string;
     elofeltetelek?: string;
     kriteriumok?: string;
