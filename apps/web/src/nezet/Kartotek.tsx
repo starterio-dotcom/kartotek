@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { szabad, uzletiTipus, type TipusKod } from '@kartotek/shared';
+import { szabad, uzletiTipus } from '@kartotek/shared';
 import { useElem, useElemKapcsolatok, useFelhasznalok } from '../api/hooks';
 import { useAuth } from '../allapot/auth';
 import { Betolto, Hiba } from '../komponens/ui';
@@ -17,15 +17,8 @@ import { KapcsolatSzerk } from './KapcsolatSzerk';
 import { HatasPanel, KiadasPanel, VeszelyZona } from './KartotekFazis6';
 import { VerzioDiff } from '../komponens/VerzioDiff';
 import type { Verzio } from '../api/tipusok';
-
-const TIPUS_NEV: Record<TipusKod, string> = {
-  BUS: 'Üzleti User Story',
-  TUC: 'Technikai Use Case',
-  F: 'Feature',
-  TUS: 'Technikai User Story',
-  BD: 'Üzleti dokumentum',
-  TD: 'Technikai dokumentum',
-};
+import { TIPUS_NEV, RETEG_NEV } from '../domain/szotar';
+import { alapVerzio, verzioKontextus } from '../domain/verzio';
 
 const datumHu = (d: string | null) => (d ? new Date(d).toLocaleDateString('hu-HU') : '—');
 
@@ -39,7 +32,7 @@ function autoHint(v: Verzio): string | null {
 
 export function Kartotek() {
   const { id } = useParams<{ id: string }>();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const nav = useNavigate();
   const { felhasznalo } = useAuth();
   const { data: elem, isLoading, isError, error } = useElem(id);
@@ -50,16 +43,25 @@ export function Kartotek() {
     (felhasznalok ?? []).forEach((f) => m.set(f.id, f.nev));
     return m;
   }, [felhasznalok]);
-  const [valasztottV, setValasztottV] = useState<number | null>(null);
+  // A verzió az URL-ben is (`?v=2`): mélylink, és az értesítés a megfelelő verziót nyitja.
+  const [valasztottV, setValasztottV] = useState<number | null>(() => Number(params.get('v')) || null);
   const [szerkeszt, setSzerkeszt] = useState(false);
   const [osszevetV, setOsszevetV] = useState<number | null>(null);
 
   if (isLoading) return <Betolto />;
-  if (isError) return <main><Hiba uzenet={(error as Error).message} /></main>;
+  if (isError) return <Hiba uzenet={(error as Error).message} />;
   if (!elem || !felhasznalo) return null;
 
   const verziok = [...elem.verziok].sort((a, b) => b.verzioSzam - a.verzioSzam);
-  const ver: Verzio = verziok.find((v) => v.verzioSzam === valasztottV) ?? verziok[0]!;
+  const ver: Verzio = verziok.find((v) => v.verzioSzam === valasztottV) ?? alapVerzio(elem, felhasznalo);
+  const kontextus = verzioKontextus(elem, ver);
+  const valaszt = (v: number) => {
+    setValasztottV(v);
+    setOsszevetV(null);
+    const uj = new URLSearchParams(params);
+    uj.set('v', String(v));
+    setParams(uj, { replace: true });
+  };
   // Verzió-összehasonlítás: a kiválasztott `ver` és egy másik verzió (régi → új sorrendben).
   const osszevetMasik = osszevetV != null ? verziok.find((v) => v.verzioSzam === osszevetV) : null;
   const [diffRegi, diffUj] =
@@ -83,7 +85,11 @@ export function Kartotek() {
   };
 
   const mellKontextus = { elemId: elem.id, verzioSzam: ver.verzioSzam, mellekletek: ver.mellekletek };
-  const morzsaParams = params.toString();
+  const morzsaParams = (() => {
+    const p = new URLSearchParams(params);
+    p.delete('v');
+    return p.toString();
+  })();
 
   return (
     <>
@@ -102,7 +108,7 @@ export function Kartotek() {
             <h2 className="reszlet-cim">{ver.cim}</h2>
             <div className="reszlet-altipus">
               {TIPUS_NEV[tipusKod] ?? tipusKod}
-              {elem.retegKod ? ` · ${elem.retegKod} réteg` : ''} · {uzleti ? 'üzleti elem' : 'technikai elem'}
+              {elem.retegKod ? ` · ${elem.retegKod} réteg${RETEG_NEV[elem.retegKod] !== elem.retegKod ? ` (${RETEG_NEV[elem.retegKod]})` : ''}` : ''} · {uzleti ? 'üzleti elem' : 'technikai elem'}
             </div>
           </div>
           <div className="rf-akciok">
@@ -110,10 +116,7 @@ export function Kartotek() {
               elem={elem}
               verzio={ver}
               felhasznalo={felhasznalo}
-              onUjVerzio={(v) => {
-                setValasztottV(v);
-                setOsszevetV(null);
-              }}
+              onUjVerzio={valaszt}
             />
           </div>
         </div>
@@ -140,6 +143,14 @@ export function Kartotek() {
             </>
           ) : (
             <>
+              {kontextus && (
+                <div className="verzio-kontextus" role="note">
+                  <span>{kontextus.szoveg}</span>
+                  <button className="gomb masodlagos kicsi" onClick={() => valaszt(kontextus.cel)}>
+                    Megnézem: v{kontextus.cel}
+                  </button>
+                </div>
+              )}
               <div className="blokk">
                 <div className="blokk-cim">Rövid leírás</div>
                 <div className="torzs">
@@ -219,10 +230,7 @@ export function Kartotek() {
                   // Szerkesztés közben a verzióváltás elvinné a mentetlen munkát.
                   disabled={szerkeszt && v.verzioSzam !== ver.verzioSzam}
                   title={szerkeszt ? 'Szerkesztés közben nem válthatsz verziót — előbb ments, vagy lépj ki.' : undefined}
-                  onClick={() => {
-                    setValasztottV(v.verzioSzam);
-                    setOsszevetV(null);
-                  }}
+                  onClick={() => valaszt(v.verzioSzam)}
                 >
                   <span className="vszam">v{v.verzioSzam}</span>
                   <span className="tolto" />

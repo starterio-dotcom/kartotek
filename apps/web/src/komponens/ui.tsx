@@ -73,6 +73,7 @@ export function Modal({
 
     const kezelo = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (e.defaultPrevented) return; // egy belső vezérlő (pl. lenyíló lista) már kezelte
         bezarRef.current();
         return;
       }

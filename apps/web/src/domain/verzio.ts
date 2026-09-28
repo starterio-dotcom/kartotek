@@ -7,7 +7,7 @@ import {
   type Muvelet,
   type Kontextus,
 } from '@kartotek/shared';
-import type { Elem, Verzio } from '../api/tipusok';
+import type { Elem, ElemOsszegzo, Verzio, VerzioOsszegzo } from '../api/tipusok';
 import type { Felhasznalo } from '../api/tipusok';
 
 /** A verzió szerzői a négy-szem-elvhez — a `shared` szabálya, ugyanaz, mint a backenden. */
@@ -35,7 +35,49 @@ export function elerhetoMuveletek(
   return elerhetoVerzioMuveletek(ctx).filter((m) => !jogiZarolasTiltja(m, elem.jogiZarolas));
 }
 
-export type DialogTipus = 'nincs' | 'jovahagyas' | 'visszadobas' | 'kivezetes' | 'elvetes' | 'megerosites';
+/** Csak Olvasó (vagy tagság nélküli) az alkalmazáson — neki a hatályos tartalom a lényeg. */
+export function csakOlvaso(felhasznalo: Felhasznalo, alkalmazasKod: string): boolean {
+  if (felhasznalo.globalisAdmin) return false;
+  return felhasznalo.tagsagok.filter((t) => t.alkalmazasKod === alkalmazasKod).every((t) => t.szerepkor === 'Olvasó');
+}
+
+/**
+ * Melyik verzió nyíljon meg alapból: az Olvasónak a HATÁLYOS (ha van) — nem egy félkész
+ * vázlat —, a szerkesztő szerepkörűeknek a legújabb (azon dolgoznak).
+ */
+export function alapVerzio(elem: Elem, felhasznalo: Felhasznalo): Verzio {
+  const verziok = [...elem.verziok].sort((a, b) => b.verzioSzam - a.verzioSzam);
+  const hatalyos = verziok.find((v) => v.statusz === 'Hatályos');
+  return (csakOlvaso(felhasznalo, elem.alkalmazasKod) && hatalyos) || verziok[0]!;
+}
+
+/**
+ * Tájékoztató sáv a megnyitott verzió fölé, ha van másik, releváns verzió: a hatályos,
+ * ha nem az látszik; vagy a készülő újabb, ha a hatályosat nézzük. `null`, ha nincs mit mondani.
+ */
+export function verzioKontextus(elem: Elem, ver: Verzio): { szoveg: string; cel: number } | null {
+  const verziok = [...elem.verziok].sort((a, b) => b.verzioSzam - a.verzioSzam);
+  const hatalyos = verziok.find((v) => v.statusz === 'Hatályos');
+  const keszulo = verziok.find((v) => v.verzioSzam > ver.verzioSzam && !VEGALLAPOTOK.includes(v.statusz));
+  if (ver.statusz === 'Hatályos') {
+    return keszulo
+      ? { szoveg: `Ez a hatályos v${ver.verzioSzam}. Készül egy újabb változat: v${keszulo.verzioSzam} (${keszulo.statusz}).`, cel: keszulo.verzioSzam }
+      : null;
+  }
+  if (hatalyos && hatalyos.verzioSzam !== ver.verzioSzam) {
+    const mi = ver.verzioSzam > hatalyos.verzioSzam ? 'még nem hatályos' : 'egy korábbi, már nem hatályos változat';
+    return {
+      szoveg: `Ez a v${ver.verzioSzam} (${ver.statusz}) — ${mi}. A jelenleg hatályos: v${hatalyos.verzioSzam}.`,
+      cel: hatalyos.verzioSzam,
+    };
+  }
+  if (keszulo && ver.statusz === 'Elavult') {
+    return { szoveg: `Ez egy elavult változat (v${ver.verzioSzam}). Újabb: v${keszulo.verzioSzam} (${keszulo.statusz}).`, cel: keszulo.verzioSzam };
+  }
+  return null;
+}
+
+export type DialogTipus ='nincs' | 'jovahagyas' | 'visszadobas' | 'kivezetes' | 'elvetes' | 'megerosites';
 
 export interface MuveletUi {
   muvelet: Muvelet;
@@ -203,4 +245,11 @@ export function muveletHint(elem: Elem, verzio: Verzio, felhasznalo: Felhasznalo
     default:
       return 'Ebben az állapotban nincs számodra elérhető lépés.';
   }
+}
+
+/** A listában kiemelt verzió: a legfrissebb nem-végállapotú, vagy a legmagasabb. */
+export function elsodlegesVerzio(e: ElemOsszegzo): VerzioOsszegzo {
+  const aktiv = e.verziok.filter((v) => !VEGALLAPOTOK.includes(v.statusz));
+  const halmaz = aktiv.length ? aktiv : e.verziok;
+  return halmaz.reduce((a, b) => (b.verzioSzam > a.verzioSzam ? b : a), halmaz[0]!);
 }

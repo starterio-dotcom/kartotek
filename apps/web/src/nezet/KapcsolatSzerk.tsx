@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { szabad, jogiZarolasTiltja, KAPCSOLAT_FAJTAK, type KapcsolatFajta } from '@kartotek/shared';
 import { useElemek, useKapcsolatLetrehozas, useKapcsolatTorles } from '../api/hooks';
@@ -6,6 +6,8 @@ import { Modal, Hiba } from '../komponens/ui';
 import { hibaSzoveg } from '../api/hibaSzoveg';
 import { uzenet } from '../allapot/uzenetek';
 import type { Elem, ElemKapcsolatok, ElemOsszegzo, Felhasznalo, Kapcsolat } from '../api/tipusok';
+import { ElemValaszto } from '../komponens/ElemValaszto';
+import { KAPCSOLAT_LEIRAS } from '../domain/szotar';
 
 export function KapcsolatSzerk({
   elem,
@@ -152,25 +154,27 @@ function UjKapcsolatModal({
   onBezar: () => void;
 }) {
   const felvesz = useKapcsolatLetrehozas(elem.id);
+  const id = useId();
   const [fajta, setFajta] = useState<KapcsolatFajta>('lebontja');
   const [celElemId, setCelElemId] = useState('');
   const [szabalyzatKod, setSzabalyzatKod] = useState('');
   const [kulsoLink, setKulsoLink] = useState('');
+
+  const celKulcs =
+    fajta === 'megfelel'
+      ? szabalyzatKod
+      : fajta === 'hivatkozik' && kulsoLink
+        ? kulsoLink
+        : (elemek.find((e) => e.id === celElemId)?.kulcs ?? '');
 
   const kuld = () => {
     const body: Record<string, unknown> = { forrasElemId: elem.id, fajta };
     if (fajta === 'megfelel') body.celSzabalyzatKod = szabalyzatKod;
     else if (fajta === 'hivatkozik' && kulsoLink) body.celKulsoLink = kulsoLink;
     else body.celElemId = celElemId;
-    const cel =
-      fajta === 'megfelel'
-        ? szabalyzatKod
-        : fajta === 'hivatkozik' && kulsoLink
-          ? kulsoLink
-          : (elemek.find((e) => e.id === celElemId)?.kulcs ?? '');
     felvesz.mutate(body, {
       onSuccess: () => {
-        uzenet.siker(`Kapcsolat felvéve: ${elem.kulcs} ${fajta} → ${cel}`);
+        uzenet.siker(`Kapcsolat felvéve: ${elem.kulcs} ${fajta} → ${celKulcs}`);
         onBezar();
       },
     });
@@ -180,38 +184,52 @@ function UjKapcsolatModal({
     fajta === 'megfelel' ? !!szabalyzatKod : fajta === 'hivatkozik' ? !!(kulsoLink || celElemId) : !!celElemId;
 
   return (
-    <Modal cim="Kapcsolat hozzáadása" onBezar={onBezar}>
-      <label>Fajta</label>
-      <select value={fajta} onChange={(e) => setFajta(e.target.value as KapcsolatFajta)}>
+    <Modal cim={`Kapcsolat hozzáadása — ${elem.kulcs}`} onBezar={onBezar}>
+      <label htmlFor={`${id}-fajta`}>Fajta</label>
+      <select id={`${id}-fajta`} value={fajta} onChange={(e) => setFajta(e.target.value as KapcsolatFajta)}>
         {KAPCSOLAT_FAJTAK.map((f) => (
-          <option key={f}>{f}</option>
+          <option key={f} value={f}>
+            {f}
+          </option>
         ))}
       </select>
+      <p className="mezo-sugo">{KAPCSOLAT_LEIRAS[fajta]}</p>
 
       {fajta === 'megfelel' ? (
         <>
-          <label>Szabályzat kódja</label>
-          <input value={szabalyzatKod} onChange={(e) => setSzabalyzatKod(e.target.value)} placeholder="pl. IB-XYT-14-1213" />
+          <label htmlFor={`${id}-szabalyzat`}>Szabályzat kódja</label>
+          <input
+            id={`${id}-szabalyzat`}
+            type="text"
+            value={szabalyzatKod}
+            onChange={(e) => setSzabalyzatKod(e.target.value)}
+            placeholder="pl. IB-XYT-14-1213"
+          />
         </>
       ) : (
         <>
-          <label>Cél elem</label>
-          <select value={celElemId} onChange={(e) => setCelElemId(e.target.value)}>
-            <option value="">— válassz —</option>
-            {elemek.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.kulcs}
-              </option>
-            ))}
-          </select>
+          <label htmlFor={`${id}-cel`}>Cél elem</label>
+          <ElemValaszto id={`${id}-cel`} elemek={elemek} ertek={celElemId} onValaszt={setCelElemId} />
           {fajta === 'hivatkozik' && (
             <>
-              <label>vagy külső link</label>
-              <input value={kulsoLink} onChange={(e) => setKulsoLink(e.target.value)} placeholder="https://…" />
+              <label htmlFor={`${id}-link`}>vagy külső link</label>
+              <input
+                id={`${id}-link`}
+                type="text"
+                value={kulsoLink}
+                onChange={(e) => setKulsoLink(e.target.value)}
+                placeholder="https://…"
+              />
             </>
           )}
         </>
       )}
+
+      {/* Az irány kiírva — a „ki bont le kit" a legtöbbször összekevert részlet. */}
+      <p className="kapcs-irany" aria-live="polite">
+        <b>{elem.kulcs}</b> <span className="kapcs-irany-fajta">{fajta}</span> →{' '}
+        <b>{celKulcs || '…'}</b>
+      </p>
 
       {felvesz.isError && <Hiba uzenet={hibaSzoveg(felvesz.error)} />}
 

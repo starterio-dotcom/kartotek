@@ -1072,3 +1072,46 @@ describe('felhasználó-szerepkörök kezelése (admin)', () => {
     expect((res.json().tagsagok as unknown[]).length).toBe(2);
   });
 });
+
+describe('Munkám (a felhasználó teendői)', () => {
+  type T = { kulcs: string; verzioSzam: number; indoklas?: string | null; kiNev?: string | null };
+  type M = Record<'ramVar' | 'visszadobva' | 'vazlataim' | 'bekuldve' | 'hamarosanLejar' | 'hamarosanHatalyos', T[]>;
+  const munkam = async (mint: string) => (await hiv('GET', '/api/munkam', { mint })).json() as M;
+  const van = (lista: T[], kulcs: string) => lista.some((t) => t.kulcs === kulcs);
+
+  it('beküldés → a döntéshozónál „rám vár", a szerzőnél „beküldve"; visszadobás → „visszadobva" indoklással', async () => {
+    const r = await hiv('POST', '/api/elemek', {
+      mint: ANNA,
+      body: { alkalmazasKod: '3R', tipusKod: 'BUS', cim: 'Munkám-teszt', leirasMd: 'x' },
+    });
+    const { id, kulcs } = r.json();
+    expect(van((await munkam(ANNA)).vazlataim, kulcs)).toBe(true);
+
+    await hiv('POST', `/api/elemek/${id}/verziok/1/bekuldes`, { mint: ANNA });
+    const anna = await munkam(ANNA);
+    expect(van(anna.bekuldve, kulcs)).toBe(true);
+    expect(van(anna.ramVar, kulcs)).toBe(false); // a saját verzióját nem hagyhatja jóvá
+    const peter = await munkam(PETER);
+    expect(peter.ramVar.find((t) => t.kulcs === kulcs)).toMatchObject({ verzioSzam: 1, kiNev: 'Kiss Anna' });
+    expect(van((await munkam(DORA)).ramVar, kulcs)).toBe(false); // más alkalmazás
+
+    await hiv('POST', `/api/elemek/${id}/verziok/1/visszadobas`, { mint: PETER, body: { indoklas: 'Pontosítsd.' } });
+    const utana = await munkam(ANNA);
+    expect(utana.visszadobva.find((t) => t.kulcs === kulcs)).toMatchObject({ indoklas: 'Pontosítsd.', kiNev: 'Nagy Péter' });
+    expect(van(utana.vazlataim, kulcs)).toBe(false);
+    expect(van((await munkam(PETER)).ramVar, kulcs)).toBe(false);
+  });
+
+  it('a szerző saját visszavonása NEM „visszadobás"', async () => {
+    const r = await hiv('POST', '/api/elemek', {
+      mint: ANNA,
+      body: { alkalmazasKod: '3R', tipusKod: 'BUS', cim: 'Visszavont', leirasMd: 'x' },
+    });
+    const { id, kulcs } = r.json();
+    await hiv('POST', `/api/elemek/${id}/verziok/1/bekuldes`, { mint: ANNA });
+    await hiv('POST', `/api/elemek/${id}/verziok/1/visszavonas`, { mint: ANNA });
+    const anna = await munkam(ANNA);
+    expect(van(anna.vazlataim, kulcs)).toBe(true);
+    expect(van(anna.visszadobva, kulcs)).toBe(false);
+  });
+});

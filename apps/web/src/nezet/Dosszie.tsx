@@ -1,21 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { STATUSZOK, uzletiTipus, lefedetlenBus, type Statusz, type TipusKod } from '@kartotek/shared';
+import { STATUSZOK, uzletiTipus, lefedetlenBus, type Statusz } from '@kartotek/shared';
 import { useElemekTeljes, useGraf, useAlkalmazasok, useSzolgaltatasok } from '../api/hooks';
 import { Betolto, Hiba } from '../komponens/ui';
 import { GazdagNezet } from '../komponens/GazdagNezet';
 import { Markdown } from '../komponens/Markdown';
 import { letoltes } from '../api/kliens';
 import type { Elem, Verzio } from '../api/tipusok';
-
-const TIPUS_NEV: Record<TipusKod, string> = {
-  BUS: 'Üzleti User Story',
-  TUC: 'Technikai Use Case',
-  F: 'Feature',
-  TUS: 'Technikai User Story',
-  BD: 'Üzleti dokumentum',
-  TD: 'Technikai dokumentum',
-};
+import { TIPUS_NEV } from '../domain/szotar';
 
 const datumHu = (d: string | null | undefined) =>
   d ? new Date(d).toLocaleDateString('hu-HU') : '—';

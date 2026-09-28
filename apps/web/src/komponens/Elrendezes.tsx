@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Outlet, useLocation, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth, DEV_FELHASZNALOK } from '../allapot/auth';
-import { useSzolgaltatasok } from '../api/hooks';
+import { useMunkam, useSzolgaltatasok } from '../api/hooks';
 import { api } from '../api/kliens';
 import { uzenet } from '../allapot/uzenetek';
 import { ListaPanel } from '../nezet/ListaPanel';
 import { Graf } from '../nezet/Graf';
 import { UjElemModal } from '../nezet/UjElemModal';
 import { ErtesitesHarang } from './ErtesitesHarang';
+import { Legordulo } from './Legordulo';
 
 /** Build-időben rögzített környezet: a staging jól láthatóan elkülönül az éles rendszertől. */
 const TESZTKORNYEZET = import.meta.env.VITE_KORNYEZET === 'staging';
@@ -42,13 +43,25 @@ export function Elrendezes() {
   // Kijelentkezve nem kérdezünk le — token nélkül csak 401 lenne belőle.
   const { data: szolgaltatasok } = useSzolgaltatasok({ enabled: !!felhasznalo });
   const [params, setParams] = useSearchParams();
-  const nav = useNavigate();
   const location = useLocation();
   const qc = useQueryClient();
   const [ujNyitva, setUjNyitva] = useState(false);
 
   const alk = params.get('alk') ?? '';
   const grafNezet = location.pathname === '/graf';
+  const admin = !!felhasznalo?.globalisAdmin;
+  const { data: munkam } = useMunkam(!!felhasznalo);
+  // A jelvény a CSELEKVÉST igénylő tételeket számolja: rám váró döntés + visszadobott verzió.
+  const teendok = (munkam?.ramVar.length ?? 0) + (munkam?.visszadobva.length ?? 0);
+  const alkQs = alk ? `?alk=${alk}` : '';
+  const utvonal = location.pathname;
+  const navPontok = [
+    { ut: '/munkam', ikon: '★', cimke: 'Munkám', aktiv: utvonal === '/munkam', jelveny: teendok },
+    { ut: `/graf${alkQs}`, ikon: '◍', cimke: 'Gráf', aktiv: grafNezet, jelveny: 0 },
+    { ut: `/dosszie${alkQs}`, ikon: '▦', cimke: 'Dosszié', aktiv: utvonal === '/dosszie', jelveny: 0 },
+    { ut: `/riportok${alkQs}`, ikon: '▤', cimke: 'Riportok', aktiv: utvonal === '/riportok', jelveny: 0 },
+    { ut: '/kiadasok', ikon: '⎙', cimke: 'Kiadások', aktiv: utvonal === '/kiadasok', jelveny: 0 },
+  ];
 
   const utemezo = useMutation({
     mutationFn: () => api.post<UtemezoEredmeny>('/api/utemezo/futtat', { ma: maStr() }),
@@ -64,6 +77,38 @@ export function Elrendezes() {
     else uj.delete('q');
     setParams(uj, { replace: true });
   };
+
+  // Render-függvény (nem beágyazott komponens): a szülő újrarenderelése ne csatolja újra.
+  const adminPontok = (bezar: () => void) => (
+      <>
+        {[
+          { ut: '/felhasznalok', ikon: '☖', cimke: 'Felhasználók' },
+          { ut: '/audit', ikon: '☷', cimke: 'Audit-napló' },
+        ].map((p) => (
+          <Link
+            key={p.ut}
+            to={p.ut}
+            className="legordulo-tetel"
+            aria-current={utvonal === p.ut ? 'page' : undefined}
+            onClick={bezar}
+          >
+            <span aria-hidden="true">{p.ikon}</span> {p.cimke}
+          </Link>
+        ))}
+        <button
+          type="button"
+          className="legordulo-tetel"
+          disabled={utemezo.isPending}
+          title="Dátumvezérelt AUTO átmenetek végrehajtása most"
+          onClick={() => {
+            bezar();
+            utemezo.mutate();
+          }}
+        >
+          <span aria-hidden="true">▶</span> Ütemező futtatása
+        </button>
+      </>
+  );
 
   const letrehozhat =
     felhasznalo &&
@@ -81,13 +126,13 @@ export function Elrendezes() {
         </div>
       )}
       <header>
-        <div className="brand">
+        <Link to="/" className="brand" aria-label="Kartoték — áttekintés">
           <div className="brand-jel" aria-hidden="true" />
           <div>
             <h1>Kartoték</h1>
             <div className="al">{szolgaltatasok?.[0]?.nev ?? 'FAIR'} · követelménykövetés</div>
           </div>
-        </div>
+        </Link>
 
         <div className="kereso-wrap">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
@@ -106,61 +151,57 @@ export function Elrendezes() {
 
         <div className="header-spacer" />
 
-        {felhasznalo?.globalisAdmin && (
-          <button
-            className="gomb masodlagos"
-            onClick={() => utemezo.mutate()}
-            disabled={utemezo.isPending}
-            title="Dátumvezérelt AUTO átmenetek végrehajtása"
-          >
-            ▶ Ütemező
-          </button>
+        {felhasznalo && (
+          <nav aria-label="Fő navigáció" className="fo-nav">
+            {navPontok.map((p) => (
+              <Link
+                key={p.ut}
+                to={p.ut}
+                className={`gomb masodlagos${p.aktiv ? ' aktiv' : ''}`}
+                aria-current={p.aktiv ? 'page' : undefined}
+              >
+                <span aria-hidden="true">{p.ikon}</span> {p.cimke}
+                {p.jelveny ? (
+                  <span className="nav-jelveny">
+                    <span className="sr-only">, teendő: </span>
+                    {p.jelveny}
+                  </span>
+                ) : null}
+              </Link>
+            ))}
+            {admin && <Legordulo cimke="Admin">{adminPontok}</Legordulo>}
+          </nav>
         )}
-        <button
-          className={`gomb masodlagos${grafNezet ? ' aktiv' : ''}`}
-          aria-current={grafNezet ? 'page' : undefined}
-          onClick={() => nav(`/graf?${alk ? `alk=${alk}` : ''}`)}
-        >
-          ◍ Gráf
-        </button>
-        <button
-          className={`gomb masodlagos${location.pathname === '/dosszie' ? ' aktiv' : ''}`}
-          aria-current={location.pathname === '/dosszie' ? 'page' : undefined}
-          onClick={() => nav(`/dosszie?${alk ? `alk=${alk}` : ''}`)}
-        >
-          ▦ Dosszié
-        </button>
-        <button
-          className={`gomb masodlagos${location.pathname === '/riportok' ? ' aktiv' : ''}`}
-          aria-current={location.pathname === '/riportok' ? 'page' : undefined}
-          onClick={() => nav(`/riportok?${alk ? `alk=${alk}` : ''}`)}
-        >
-          ▤ Riportok
-        </button>
-        <button
-          className={`gomb masodlagos${location.pathname === '/kiadasok' ? ' aktiv' : ''}`}
-          aria-current={location.pathname === '/kiadasok' ? 'page' : undefined}
-          onClick={() => nav('/kiadasok')}
-        >
-          ⎙ Kiadások
-        </button>
-        {felhasznalo?.globalisAdmin && (
-          <button
-            className={`gomb masodlagos${location.pathname === '/felhasznalok' ? ' aktiv' : ''}`}
-            aria-current={location.pathname === '/felhasznalok' ? 'page' : undefined}
-            onClick={() => nav('/felhasznalok')}
+        {felhasznalo && (
+          // Szűk képernyőn (≤1180 px) a teljes navigáció egyetlen menübe csukódik.
+          <Legordulo
+            className="menu-szuk"
+            cimke={
+              <>
+                ☰ Menü
+                {teendok ? <span className="nav-jelveny">{teendok}</span> : null}
+              </>
+            }
           >
-            ☖ Felhasználók
-          </button>
-        )}
-        {felhasznalo?.globalisAdmin && (
-          <button
-            className={`gomb masodlagos${location.pathname === '/audit' ? ' aktiv' : ''}`}
-            aria-current={location.pathname === '/audit' ? 'page' : undefined}
-            onClick={() => nav('/audit')}
-          >
-            ☷ Audit
-          </button>
+            {(bezar) => (
+              <>
+                {navPontok.map((p) => (
+                  <Link
+                    key={p.ut}
+                    to={p.ut}
+                    className="legordulo-tetel"
+                    aria-current={p.aktiv ? 'page' : undefined}
+                    onClick={bezar}
+                  >
+                    <span aria-hidden="true">{p.ikon}</span> {p.cimke}
+                    {p.jelveny ? <span className="nav-jelveny">{p.jelveny}</span> : null}
+                  </Link>
+                ))}
+                {admin && <div className="legordulo-elvalaszto" role="separator" />}
+                {admin && adminPontok(bezar)}
+              </>
+            )}
+          </Legordulo>
         )}
 
         <div className="hctrl">
@@ -194,8 +235,9 @@ export function Elrendezes() {
         </div>
 
         {letrehozhat && (
-          <button className="gomb elsodleges" onClick={() => setUjNyitva(true)}>
-            + Új elem
+          <button className="gomb elsodleges uj-elem-gomb" onClick={() => setUjNyitva(true)} aria-label="Új elem">
+            <span aria-hidden="true">+</span>
+            <span className="uj-elem-szoveg" aria-hidden="true"> Új elem</span>
           </button>
         )}
       </header>
@@ -226,7 +268,7 @@ export function Elrendezes() {
           <Graf />
         </main>
       ) : (
-        <div className="layout">
+        <div className={`layout${utvonal === '/' ? '' : ' layout-reszlet'}`}>
           <aside aria-label="Elemlista">
             <ListaPanel />
           </aside>

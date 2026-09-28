@@ -7,6 +7,7 @@ import { Riportok } from './nezet/Riportok';
 import { Kiadasok } from './nezet/Kiadasok';
 import { Felhasznalok } from './nezet/Felhasznalok';
 import { AuditNaplo } from './nezet/AuditNaplo';
+import { Munkam } from './nezet/Munkam';
 
 /**
  * Elemenként FRISS kartoték-példány: a választott verzió, az összevetés és a nyitott
@@ -29,6 +30,7 @@ export function App() {
         <Route path="kiadasok" element={<Kiadasok />} />
         <Route path="felhasznalok" element={<Felhasznalok />} />
         <Route path="audit" element={<AuditNaplo />} />
+        <Route path="munkam" element={<Munkam />} />
         {/* A gráfot az Elrendezes közvetlenül rendeli (teljes szélességben). */}
         <Route path="graf" element={null} />
       </Route>

@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { elerhetoMuveletek, lepesSikerSzoveg, muveletHint, MUVELET_UI, szerkesztoIds, vanUjabbAktivVerzio } from './verzio';
+import {
+  alapVerzio,
+  elerhetoMuveletek,
+  lepesSikerSzoveg,
+  muveletHint,
+  MUVELET_UI,
+  szerkesztoIds,
+  vanUjabbAktivVerzio,
+  verzioKontextus,
+} from './verzio';
 import type { Elem, Verzio, Felhasznalo } from '../api/tipusok';
 import type { Statusz, Szerepkor } from '@kartotek/shared';
 
@@ -133,6 +142,33 @@ describe('muveletHint — miért nincs (több) gomb', () => {
 
   it('ha a gombok önmagukért beszélnek, nincs hint', () => {
     expect(hint(verzio({ statusz: 'Vázlat', modositottaId: 'u1' }), felh('u1', 'Szerző'))).toBeNull();
+  });
+});
+
+describe('alapVerzio + verzioKontextus — melyik verzió látszik, és mit mondunk a többiről', () => {
+  const e = elem([verzio({ statusz: 'Hatályos', verzioSzam: 1 }), verzio({ statusz: 'Vázlat', verzioSzam: 2 })]);
+
+  it('az Olvasó alapból a hatályos verziót látja, a Szerző a legújabbat', () => {
+    expect(alapVerzio(e, felh('u3', 'Olvasó')).verzioSzam).toBe(1);
+    expect(alapVerzio(e, felh('u1', 'Szerző')).verzioSzam).toBe(2);
+    expect(alapVerzio(e, felh('u9', 'Olvasó', true)).verzioSzam).toBe(2); // globális Admin
+  });
+
+  it('hatály nélküli elemnél az Olvasó is a legújabbat látja', () => {
+    const csakVazlat = elem([verzio({ statusz: 'Vázlat', verzioSzam: 1 })]);
+    expect(alapVerzio(csakVazlat, felh('u3', 'Olvasó')).verzioSzam).toBe(1);
+  });
+
+  it('a hatályos nézetben jelzi a készülő újabbat; a vázlatnál a hatályosat', () => {
+    expect(verzioKontextus(e, e.verziok[0]!)).toMatchObject({ cel: 2 });
+    expect(verzioKontextus(e, e.verziok[0]!)!.szoveg).toMatch(/Készül egy újabb változat: v2/);
+    expect(verzioKontextus(e, e.verziok[1]!)).toMatchObject({ cel: 1 });
+    expect(verzioKontextus(e, e.verziok[1]!)!.szoveg).toMatch(/még nem hatályos/);
+  });
+
+  it('egyetlen verziónál nincs mit mondani', () => {
+    const egy = elem([verzio({ statusz: 'Hatályos', verzioSzam: 1 })]);
+    expect(verzioKontextus(egy, egy.verziok[0]!)).toBeNull();
   });
 });
 

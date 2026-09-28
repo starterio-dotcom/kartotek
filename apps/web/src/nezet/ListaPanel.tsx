@@ -5,8 +5,8 @@ import { TIPUS_KODOK, type Statusz } from '@kartotek/shared';
 import { useElemek, useAlkalmazasok } from '../api/hooks';
 import { api } from '../api/kliens';
 import { Betolto, Hiba } from '../komponens/ui';
-import type { ElemOsszegzo, VerzioOsszegzo } from '../api/tipusok';
 import { uzenet } from '../allapot/uzenetek';
+import { elsodlegesVerzio } from '../domain/verzio';
 
 /* ---------- Mentett szűrők (localStorage) ---------- */
 const SZURO_KULCS = 'kartotek.mentett-szurok';
@@ -43,12 +43,6 @@ function useKesleltetett<T>(ertek: T, ms: number): T {
   return k;
 }
 
-/** A listában kiemelt verzió: a legfrissebb nem-végállapotú, vagy a legmagasabb. */
-function elsodlegesVerzio(e: ElemOsszegzo): VerzioOsszegzo {
-  const aktiv = e.verziok.filter((v) => !['Elvetve', 'Archivált'].includes(v.statusz));
-  const halmaz = aktiv.length ? aktiv : e.verziok;
-  return halmaz.reduce((a, b) => (b.verzioSzam > a.verzioSzam ? b : a), halmaz[0]!);
-}
 
 export function ListaPanel() {
   const [params, setParams] = useSearchParams();
@@ -59,6 +53,13 @@ export function ListaPanel() {
   const q = (params.get('q') ?? '').toLowerCase();
   const tab = params.get('tab') ?? '';
   const tipusHalmaz = new Set((params.get('tipus') ?? '').split(',').filter(Boolean));
+  // A szűrők az elemre lépéskor megmaradnak, a választott verzió (`v`) nem — az elemenként más.
+  const szurokVerzioNelkul = (() => {
+    const p = new URLSearchParams(params);
+    p.delete('v');
+    return p.toString();
+  })();
+  const vanSzuro = !!q || !!tab || tipusHalmaz.size > 0;
 
   // A keresés a szerveren fut (kulcs/cím/címke részszóra + a tartalom teljes szövegére);
   // késleltetve, hogy ne minden billentyűleütés legyen kérés.
@@ -75,7 +76,7 @@ export function ListaPanel() {
     const uj = new URLSearchParams(params);
     if (ertek) uj.set(kulcs, ertek);
     else uj.delete(kulcs);
-    setParams(uj);
+    setParams(uj, { replace: true }); // a szűrőváltás ne töltse tele a böngésző-előzményeket
   };
   const tipusValt = (t: string) => {
     if (tipusHalmaz.has(t)) tipusHalmaz.delete(t);
@@ -244,9 +245,19 @@ export function ListaPanel() {
         {isError && <Hiba uzenet={(error as Error).message} />}
         {data && talalatok.length === 0 && (
           <div className="lista-ures">
-            Nincs a szűrésnek megfelelő elem.
-            <br />
-            Módosítsd a keresést vagy a szűrőket.
+            {vanSzuro ? (
+              <>
+                Nincs a szűrésnek megfelelő elem.
+                <br />
+                Módosítsd a keresést vagy a szűrőket.
+              </>
+            ) : (
+              <>
+                {alk ? `A(z) ${alk} alkalmazásban még nincs elem.` : 'Még nincs elem.'}
+                <br />
+                Az „+ Új elem” gombbal vehetsz fel egyet (Szerző vagy Admin szerepkörrel).
+              </>
+            )}
           </div>
         )}
         {talalatok.map((e) => {
@@ -261,7 +272,7 @@ export function ListaPanel() {
                 valasztMod && kijelolt.has(e.id) ? ' bejelolt' : ''
               }`}
               onClick={() =>
-                valasztMod ? valaszt(e.id) : nav(`/elem/${e.id}?${params.toString()}`)
+                valasztMod ? valaszt(e.id) : nav(`/elem/${e.id}?${szurokVerzioNelkul}`)
               }
             >
               <div className="le-sor1">

@@ -14,6 +14,7 @@ import type {
   KiadasTartalom,
   LefedettsegRiport,
   MegfelelesTetel,
+  Munkam,
   Szolgaltatas,
   TorlesDontes,
 } from './tipusok';
@@ -77,6 +78,16 @@ export function useErtesitesek(engedve: boolean) {
   return useQuery({
     queryKey: ['ertesitesek'],
     queryFn: () => api.get<ErtesitesLista>('/api/ertesitesek?limit=20'),
+    enabled: engedve,
+    refetchInterval: 60_000,
+  });
+}
+
+/** A saját teendők („Munkám"): percenként frissül, és minden életciklus-lépés után. */
+export function useMunkam(engedve = true) {
+  return useQuery({
+    queryKey: ['munkam'],
+    queryFn: () => api.get<Munkam>('/api/munkam'),
     enabled: engedve,
     refetchInterval: 60_000,
   });
@@ -228,8 +239,12 @@ export function useElemLetrehozas() {
       cim: string;
       leirasMd?: string;
       cimkek?: string[];
+      tipusMezok?: Record<string, unknown>;
     }) => api.post<Elem>('/api/elemek', be),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['elemek'] }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['elemek'] });
+      void qc.invalidateQueries({ queryKey: ['munkam'] });
+    },
   });
 }
 

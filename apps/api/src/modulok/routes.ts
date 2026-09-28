@@ -38,6 +38,7 @@ import { exportAdat, type ExportAdat } from '../export/adat.js';
 import { csvKeszit } from '../export/csv.js';
 import { reqifKeszit } from '../export/reqif.js';
 import { ertesitesLista, olvasottraAllit } from '../ertesites/szolgaltatas.js';
+import { munkamOsszesito } from './munkam/szolgaltatas.js';
 import { jogiZarolasBeallit } from './jogizarolas/szolgaltatas.js';
 import { globalisAdminKell } from '../auth/plugin.js';
 
@@ -412,6 +413,11 @@ export async function apiRoutes(appBase: FastifyInstance): Promise<void> {
       });
       return elem;
     },
+  );
+
+  /* ---------- Munkám: a bejelentkezett felhasználó teendői ---------- */
+  app.get('/api/munkam', { schema: { tags: ['munkám'] } }, async (req) =>
+    munkamOsszesito(app.bejelentkezesKell(req)),
   );
 
   /* ---------- Felületi értesítések (csak a saját) ---------- */

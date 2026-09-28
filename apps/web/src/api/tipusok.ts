@@ -227,3 +227,26 @@ export interface AuditLista {
   limit: number;
   offset: number;
 }
+
+/** A „Munkám" oldal egy sora: egy verzió, amivel a felhasználónak dolga van. */
+export interface MunkamTetel {
+  elemId: string;
+  kulcs: string;
+  alkalmazasKod: string;
+  verzioSzam: number;
+  cim: string;
+  statusz: Statusz;
+  mikor: string | null;
+  kiNev?: string | null;
+  indoklas?: string | null;
+  nyitottMegjegyzes?: number;
+}
+
+export interface Munkam {
+  ramVar: MunkamTetel[];
+  visszadobva: MunkamTetel[];
+  vazlataim: MunkamTetel[];
+  bekuldve: MunkamTetel[];
+  hamarosanLejar: MunkamTetel[];
+  hamarosanHatalyos: MunkamTetel[];
+}

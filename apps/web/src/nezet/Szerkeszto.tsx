@@ -9,6 +9,7 @@ import { ApiHiba } from '../api/kliens';
 import { hibaSzoveg } from '../api/hibaSzoveg';
 import { uzenet } from '../allapot/uzenetek';
 import type { Elem, Verzio } from '../api/tipusok';
+import { CIA_ALAP, CIA_SZINTEK } from '../domain/szotar';
 
 export function Szerkeszto({
   elem,
@@ -23,15 +24,24 @@ export function Szerkeszto({
   const qc = useQueryClient();
   // Optimista zár: a szerkesztő MEGNYITÁSAKORI revízió az alap (a cache közben frissülhet).
   const [alapRevizio] = useState(() => verzio.revizio ?? 0);
-  const tm = (verzio.tipusMezok ?? {}) as { rovid?: string; elofeltetelek?: string; kriteriumok?: string };
+  const tm = (verzio.tipusMezok ?? {}) as {
+    rovid?: string;
+    elofeltetelek?: string;
+    kriteriumok?: string;
+    cia?: { c: number; i: number; a: number } | null;
+  };
   const dokumentum = elem.tipusKod === 'BD' || elem.tipusKod === 'TD';
   // A megnyitáskori értékek — ehhez mérjük, van-e mentetlen módosítás.
   const [kezdo] = useState(() => ({
+    cim: verzio.cim,
+    cia: tm.cia ?? CIA_ALAP,
     rovid: tm.rovid ?? '',
     elofeltetelek: tm.elofeltetelek ?? '',
     kriteriumok: tm.kriteriumok ?? '',
     cimkek: elem.cimkek.join(', '),
   }));
+  const [cim, setCim] = useState(kezdo.cim);
+  const [cia, setCia] = useState(kezdo.cia);
   const [rovid, setRovid] = useState(kezdo.rovid);
   const [elofeltetelek, setElofeltetelek] = useState(kezdo.elofeltetelek);
   const [kriteriumok, setKriteriumok] = useState(kezdo.kriteriumok);
@@ -42,6 +52,8 @@ export function Szerkeszto({
   const piszkos =
     !mentes.isSuccess &&
     (leiras !== undefined ||
+      cim !== kezdo.cim ||
+      (dokumentum && (cia.c !== kezdo.cia.c || cia.i !== kezdo.cia.i || cia.a !== kezdo.cia.a)) ||
       rovid !== kezdo.rovid ||
       elofeltetelek !== kezdo.elofeltetelek ||
       kriteriumok !== kezdo.kriteriumok ||
@@ -60,11 +72,14 @@ export function Szerkeszto({
     return () => window.removeEventListener('beforeunload', kezelo);
   }, [piszkos]);
 
+  const cimHiba = cim.trim() ? null : 'A cím nem lehet üres.';
   const ment = () => {
+    if (cimHiba) return;
     mentes.mutate(
       {
+        ...(cim.trim() !== kezdo.cim ? { cim: cim.trim() } : {}),
         cimkek: cimkek.split(',').map((s) => s.trim()).filter(Boolean),
-        tipusMezok: dokumentum ? { ...tm, rovid } : { ...tm, rovid, elofeltetelek, kriteriumok },
+        tipusMezok: dokumentum ? { ...tm, rovid, cia } : { ...tm, rovid, elofeltetelek, kriteriumok },
         ...(leiras !== undefined ? { leiras } : {}),
         alapRevizio,
       },
@@ -99,10 +114,26 @@ export function Szerkeszto({
         </span>
         <span className="tolto" />
         <button className="gomb masodlagos" onClick={megse}>Mégse</button>
-        <button className="gomb elsodleges" disabled={mentes.isPending} onClick={ment}>
+        <button className="gomb elsodleges" disabled={mentes.isPending || !!cimHiba} onClick={ment}>
           {mentes.isPending ? 'Mentés…' : 'Mentés'}
         </button>
       </div>
+
+      <label className="szerk-cimke" htmlFor="szerkCim">Cím</label>
+      <input
+        id="szerkCim"
+        className="szerk-cim-mezo"
+        maxLength={200}
+        value={cim}
+        aria-invalid={cimHiba ? true : undefined}
+        aria-describedby={cimHiba ? 'szerkCimHiba' : undefined}
+        onChange={(e) => setCim(e.target.value)}
+      />
+      {cimHiba && (
+        <p className="mezo-hiba" id="szerkCimHiba" role="alert">
+          {cimHiba}
+        </p>
+      )}
 
       <label className="szerk-cimke" htmlFor="szerkRovid">Rövid leírás</label>
       <input id="szerkRovid" value={rovid} onChange={(e) => setRovid(e.target.value)} />
@@ -136,6 +167,30 @@ export function Szerkeszto({
             onChange={(e) => setKriteriumok(e.target.value)}
           />
         </>
+      )}
+
+      {dokumentum && (
+        <fieldset className="cia-szerk">
+          <legend className="szerk-cimke">CIA besorolás</legend>
+          {(
+            [
+              ['c', 'Bizalmasság'],
+              ['i', 'Sértetlenség'],
+              ['a', 'Rendelkezésre állás'],
+            ] as const
+          ).map(([k, nev]) => (
+            <label key={k}>
+              {nev}
+              <select value={cia[k]} onChange={(e) => setCia({ ...cia, [k]: Number(e.target.value) })}>
+                {CIA_SZINTEK.map((sz) => (
+                  <option key={sz} value={sz}>
+                    {sz}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </fieldset>
       )}
 
       <label className="szerk-cimke" htmlFor="szerkCimkek">Címkék (vesszővel)</label>

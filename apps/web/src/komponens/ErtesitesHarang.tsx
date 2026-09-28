@@ -41,7 +41,7 @@ export function ErtesitesHarang() {
   const megnyit = (e: Ertesites) => {
     if (!e.olvasva) olvasva.mutate([e.id]);
     setNyitva(false);
-    nav(`/elem/${e.elemId}`);
+    nav(`/elem/${e.elemId}?v=${e.verzioSzam}`); // az értesítés a megnevezett verziót nyissa
   };
 
   return (
