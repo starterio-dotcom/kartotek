@@ -1115,3 +1115,21 @@ describe('Munkám (a felhasználó teendői)', () => {
     expect(van(anna.visszadobva, kulcs)).toBe(false);
   });
 });
+
+describe('beküldés — a részletes leírás a gazdag szerkesztőből is elég', () => {
+  it('üres markdown + gazdag (TipTap) leírás → beküldhető; teljesen üresen érthető 400', async () => {
+    const r = await hiv('POST', '/api/elemek', {
+      mint: ANNA,
+      body: { alkalmazasKod: '3R', tipusKod: 'BUS', cim: 'Csak gazdag leírás', leirasMd: '' },
+    });
+    const { id } = r.json();
+    const ures = await hiv('POST', `/api/elemek/${id}/verziok/1/bekuldes`, { mint: ANNA });
+    expect(ures.statusCode).toBe(400);
+    expect(ures.json().hiba).toContain('részletes leírás');
+
+    const doc = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Leírás a szerkesztőből.' }] }] };
+    const szerk = await hiv('PATCH', `/api/elemek/${id}/verziok/1`, { mint: ANNA, body: { leiras: doc, alapRevizio: 0 } });
+    expect(szerk.statusCode).toBe(200);
+    expect((await hiv('POST', `/api/elemek/${id}/verziok/1/bekuldes`, { mint: ANNA })).statusCode).toBe(200);
+  });
+});

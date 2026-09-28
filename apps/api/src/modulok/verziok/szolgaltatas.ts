@@ -1,4 +1,4 @@
-import type { Jovahagyas, VerzioSzerkesztes } from '@kartotek/shared';
+import { tiptapSzoveg, type Jovahagyas, type VerzioSzerkesztes } from '@kartotek/shared';
 import { hiba400, hiba409 } from '../../hibak.js';
 import { ellenoriz, verzioCtx, vanUjabbAktivVerzio } from '../../auth/rbac.js';
 import type { AktualisFelhasznalo } from '../../auth/plugin.js';
@@ -7,10 +7,12 @@ import { elemBetolt, verzioKeres, naplozEsLeptet, elemValasz, jogiZarolasEllenor
 type Valasz = Record<string, unknown>;
 
 /** Beküldéshez kötelező kartoték-mezők ellenőrzése. */
-function bekuldesreKesz(verzio: { cim?: string; leirasMd?: string }): string[] {
+function bekuldesreKesz(verzio: { cim?: string; leirasMd?: string; leiras?: unknown }): string[] {
   const hianyzo: string[] = [];
   if (!verzio.cim?.trim()) hianyzo.push('cím');
-  if (!verzio.leirasMd?.trim()) hianyzo.push('leírás');
+  // A részletes leírás lehet markdown (régi/seed tartalom) VAGY a gazdag szerkesztő JSON-ja —
+  // a szerkesztő csak az utóbbit menti, így a csak-markdown ellenőrzés tévesen hiányolta.
+  if (!verzio.leirasMd?.trim() && !tiptapSzoveg(verzio.leiras).trim()) hianyzo.push('részletes leírás');
   return hianyzo;
 }
 

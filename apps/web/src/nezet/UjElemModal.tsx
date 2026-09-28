@@ -160,6 +160,7 @@ export function UjElemModal({
           </button>
         </div>
         <textarea placeholder={LEIRAS_SABLON[tipus]} {...mezo('leirasMd')} {...register('leirasMd')} />
+        <p className="mezo-sugo">A beküldéshez kötelező — most, vagy később a szerkesztőben is megadhatod.</p>
 
         <label htmlFor={`${id}-cimkek`}>Címkék (vesszővel elválasztva)</label>
         <input type="text" placeholder="pl. regisztráció, e-mail" {...mezo('cimkek')} {...register('cimkek')} />

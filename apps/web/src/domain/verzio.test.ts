@@ -140,8 +140,14 @@ describe('muveletHint — miért nincs (több) gomb', () => {
     expect(hint(verzio({ statusz: 'Véleményezés', modositottaId: 'u1' }), felh('u1', 'Szerző'))).toMatch(/jóváhagyó dönt/);
   });
 
+  it('üres részletes leírásnál a beküldés előtt figyelmeztet', () => {
+    expect(hint(verzio({ statusz: 'Vázlat', modositottaId: 'u1', leirasMd: '' }), felh('u1', 'Szerző'))).toMatch(/részletes leírást/);
+    const gazdag = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'van' }] }] };
+    expect(hint(verzio({ statusz: 'Vázlat', modositottaId: 'u1', leirasMd: '', leiras: gazdag }), felh('u1', 'Szerző'))).toBeNull();
+  });
+
   it('ha a gombok önmagukért beszélnek, nincs hint', () => {
-    expect(hint(verzio({ statusz: 'Vázlat', modositottaId: 'u1' }), felh('u1', 'Szerző'))).toBeNull();
+    expect(hint(verzio({ statusz: 'Vázlat', modositottaId: 'u1', leirasMd: 'tartalom' }), felh('u1', 'Szerző'))).toBeNull();
   });
 });
 

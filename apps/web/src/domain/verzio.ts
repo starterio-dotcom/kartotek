@@ -2,6 +2,7 @@ import {
   elerhetoVerzioMuveletek,
   jogiZarolasTiltja,
   szabad,
+  tiptapSzoveg,
   verzioSzerzoIds,
   VEGALLAPOTOK,
   type Muvelet,
@@ -210,6 +211,10 @@ export function muveletHint(elem: Elem, verzio: Verzio, felhasznalo: Felhasznalo
   const alkalmazasKod = elem.alkalmazasKod;
   const szerepek = felhasznalo.tagsagok.filter((t) => t.alkalmazasKod === alkalmazasKod).map((t) => t.szerepkor);
   const csakOlvaso = !felhasznalo.globalisAdmin && szerepek.every((sz) => sz === 'Olvasó');
+
+  // A szerver a beküldést részletes leírás nélkül elutasítja — mondjuk meg előre.
+  if (elerheto.includes('verzió.beküldés') && !verzio.leirasMd?.trim() && !tiptapSzoveg(verzio.leiras).trim())
+    return 'A beküldéshez töltsd ki a részletes leírást (Szerkesztés).';
 
   if (st === 'Véleményezés' && !elerheto.includes('verzió.jóváhagyás')) {
     // Szerepköre alapján jóváhagyhatna (szerzők nélkül nézve) → csak a négy-szem-elv tiltja.
